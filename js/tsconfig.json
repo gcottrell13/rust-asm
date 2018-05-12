@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "ES2017",
+        "module": "ES2015",
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "moduleResolution": "node",
+        "jsx": "react",
+        "lib": [
+          "es6",
+          "dom",
+          "es2017",
+        ],
+    },
+    "include": [
+        "./src/**/*"
+    ]
+}

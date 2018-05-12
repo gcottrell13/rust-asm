@@ -1,0 +1,12 @@
+
+/target
+**/*.rs.bk
+Cargo.lock
+/js/node_modules
+/dist
+/js/dist
+/rust/target
+/workspace.code-workspace
+/rust/Cargo.toml
+
+/js/package-lock.json

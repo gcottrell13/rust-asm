@@ -1,0 +1,99 @@
+html, 
+body,
+#output {
+    height: 100%;
+}
+textarea {
+    resize: none;
+ }
+
+.debugger-container {
+    height: 100%;
+    width: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+
+    & > div {
+        height: 100%;
+    }
+
+    & .program-text {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 5px;
+        border: black solid 1px;
+
+        & .input-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+
+            & .load-button {
+                background-color: #663366;
+                color: #e4e4e4;
+
+                &:hover {
+                    background-color: #a765a7;
+                    color: #eeeeee;
+                }
+            }
+            
+            & .text-input-container {
+                flex: 1;
+
+                & .text-input {
+                    height: 100%;
+                }
+            }
+        }
+
+        & .controls-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: hidden;
+            
+            & .text-viewer {
+                font-family: monospace;
+                flex: 1;
+    
+                & .memory-line {
+                    background-color: lightgrey;
+                    color: black;
+                    height: 20px;
+    
+                    & .breakpoint-glyph {
+                        color: rgb(228, 35, 35);
+                        margin-right: 5px;
+                    }
+    
+                    & .line-number {
+                        min-width: 40px;
+                        display: inline-block;
+                        border-right: black 1px dashed;
+                        background-color: #b3b3b3;
+                    }
+                }
+    
+                & .breakpoint {
+                    background-color: rgb(226, 138, 138);
+                    color: white;
+    
+                    & .line-number {
+                        background-color: #bd9a9a;
+                    }
+                }
+    
+                & .highlight {
+                    background-color: rgb(222, 231, 90);
+                    color: rgb(56, 50, 50);
+    
+                    & .line-number {
+                        background-color: #989c5d;
+                    }
+                }
+            }
+        }
+    }
+}
