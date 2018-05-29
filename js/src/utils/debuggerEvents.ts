@@ -16,9 +16,11 @@ export function AddListener(e: Events, fn: Listener) {
 }
 
 export function Trigger(e: Events, data?: any) {
-    if (listeners[e]) {
-        listeners[e].forEach(l => l(data));
-    }
+    setTimeout(() => {
+        if (listeners[e]) {
+            listeners[e].forEach(l => l(data));
+        }
+    }, 1);
 }
 
 export function RemoveListener(e: Events, fn: Listener) {

@@ -24,4 +24,9 @@ export enum ProcessorStatus {
      * The processor does not have a program to run.
      */
     Empty,
+
+    /**
+     * Status was not recognized
+     */
+    Unknown,
 }

@@ -8,3 +8,7 @@ export function TextFromBlobAsync(blob: Blob): Promise<string> {
         reader.readAsText(blob);
     });
 }
+
+export function StringToASCII(text: string): number[] {
+    return text.split('').map(c => c.charCodeAt(0));
+}

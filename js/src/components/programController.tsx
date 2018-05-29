@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { TextViewer } from './textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
-import { CheckStatus } from '../utils/controlUtils';
+import { CheckStatus, StepOverProgram } from '../utils/controlUtils';
 import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
+import { AddListener } from '../utils/debuggerEvents';
+import { Events } from '../utils/enums/Events';
 
 export interface ProgramControllerProps {
 
@@ -30,7 +32,7 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
     };
 
     onStepOver = () => {
-
+        StepOverProgram();
     };
 
     render() {
@@ -53,8 +55,24 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
                             </Button>
                         )
                     }
+                    {
+                        CheckStatus([ProcessorStatus.NotStarted, ProcessorStatus.Paused]) && (
+                            <Button
+                                onClick={this.onStepOver}
+                            >
+                                <Glyphicon glyph={'step-forward'} />
+                            </Button>
+                        )
+                    }
+                    {
+                        CheckStatus([ProcessorStatus.Halted]) && (
+                            <span>
+                                Program Halted
+                            </span>
+                        )
+                    }
                 </div>
-                <TextViewer />
+                <TextViewer blocksToDisplay={[0]}/>
             </div>
         )
     }

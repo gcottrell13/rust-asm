@@ -19,10 +19,21 @@ export class DebuggerApplication extends React.Component<{}, IState> {
 
     componentWillMount() {
         AddListener(Events.LOAD, this.onProgramLoad);
+        AddListener(Events.CONTINUE, this.Continue);
+        AddListener(Events.PAUSE, this.Pause);
     }
 
     componentWillUnmount() {
         RemoveListener(Events.LOAD, this.onProgramLoad);
+        RemoveListener(Events.CONTINUE, this.Continue);
+        RemoveListener(Events.PAUSE, this.Pause);
+    }
+
+    Continue = () => {
+        this.setState({});
+    };
+    Pause = () => {
+        this.setState({});
     }
 
     onProgramLoad = () => {

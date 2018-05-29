@@ -25,7 +25,6 @@ export class ProgramInput extends React.Component<ProgramInputProps, IState> {
 
     Load = () => {
         Initialize(this.state.programText);
-        Trigger(Events.LOAD);
     };
 
 

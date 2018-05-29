@@ -1,20 +1,14 @@
 import { ProcessorStatus } from "./enums/ProcessorStatus";
 import { NMap } from "./utilTypes";
 import { GetWasmExports } from "./webAssembly";
+import { AddListener, Trigger } from "./debuggerEvents";
+import { Events } from "./enums/Events";
+import { Continue, StepOver } from "./rustUtils";
+import { WriteAllBuffersToWasm } from "./language/syscalls";
 
 let status: ProcessorStatus = ProcessorStatus.Empty;
 
-/**
- * Returns the JS cached status
- */
-export function GetStatus() {
-    return status;
-}
-
-
 export function CheckStatus(targets: ProcessorStatus[]) {
-    let status = GetStatus();
-
     return targets.findIndex(t => t === status) !== -1;
 }
 
@@ -24,7 +18,7 @@ export function CheckStatus(targets: ProcessorStatus[]) {
 export function StartProgram() {
     if (!CheckStatus([ProcessorStatus.NotStarted])) return;
 
-
+    Continue();
 }
 
 /**
@@ -34,30 +28,36 @@ export function PauseProgram() {
 
 }
 
-
-
+export function StepOverProgram() {
+    WriteAllBuffersToWasm();
+    StepOver();
+    UpdateStatusCacheWithAuthoritative();
+    Trigger(Events.PAUSE);
+}
 
 // Meant for private use only
 
-/**
- * Queries the rust processor status.
- */
-function GetProcessorStatus() {
-    let exports = GetWasmExports();
-    let status = exports.r_GetProcessorStatus();
-    switch(status) {
-        case 0:
-            return ProcessorStatus.Paused;
-        case 1:
-            return ProcessorStatus.Halted;
-        case 2:
-            return ProcessorStatus.NotStarted;
-        case 3:
-            return ProcessorStatus.Running;
-        case 4:
-            return ProcessorStatus.Empty;
-    }
+function UpdateStatusCacheWithAuthoritative() {
+    status = GetWasmExports()
+        .prop('r_GetProcessorStatus')
+        .map(f => {
+            switch (f()) {
+                case 0:
+                    return ProcessorStatus.Paused;
+                case 1:
+                    return ProcessorStatus.Halted;
+                case 2:
+                    return ProcessorStatus.NotStarted;
+                case 3:
+                    return ProcessorStatus.Running;
+                case 4:
+                    return ProcessorStatus.Empty;
+                default:
+                    return ProcessorStatus.Unknown;
+            }
+        })
+        .unwrap();
 }
-function UpdateStatusCacheWithAuthoritative () {
-    status = GetProcessorStatus();
-}
+
+
+AddListener(Events.LOAD, UpdateStatusCacheWithAuthoritative);

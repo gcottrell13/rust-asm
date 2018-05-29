@@ -16,7 +16,7 @@ use std::os::raw::{c_double, c_float, c_int};
 
 extern "C" {
     fn js_setMemoryLocation(location: c_int, value: c_int);
-    fn js_syscall(code: c_int, argument: c_int);
+    fn js_syscall(code: c_int, argument: c_int) -> c_int;
 }
 
 #[no_mangle]
@@ -37,6 +37,11 @@ pub extern "C" fn r_Continue() {
 #[no_mangle]
 pub extern "C" fn r_SetMemoryLocation(location: u64, value: i64) {
     SetMemoryLocation(location, value);
+}
+
+#[no_mangle]
+pub extern "C" fn r_GetMemoryLocation(location: u64) -> c_int {
+    return GetMemoryLocation(location);
 }
 
 #[no_mangle]
@@ -195,9 +200,9 @@ fn step(program: &mut Program) -> bool {
     return false;
 }
 
-fn syscall(code: i64, arg: i64) {
+fn syscall(code: i64, arg: i64) -> i32 {
     unsafe {
-        js_syscall(code as i32, arg as i32);
+        return js_syscall(code as i32, arg as i32);
     }
 }
 
@@ -225,6 +230,13 @@ fn SetMemoryLocation(location: u64, value: i64) {
     let processor = &mut MAIN_PROGRAM.lock().unwrap()
         .Processor;
     processor._set_memory_loc(location, value);
+    jsSetMemoryLocation(location as c_int, value as c_int);
+}
+
+fn GetMemoryLocation(location: u64) -> c_int {
+    let processor = &mut MAIN_PROGRAM.lock().unwrap()
+        .Processor;
+    return processor._get_memory_loc(location) as c_int;
 }
 
 // fn GetMemoryByBlock(blockNum: u32) -> Vec<f32> {
@@ -247,6 +259,10 @@ fn StepOver() {
         ProcessorStatus::Paused => {
             step(program);
         },
+        ProcessorStatus::NotStarted => {
+            step(program);
+            program.Processor.status = ProcessorStatus::Paused;
+        }
         _ => {},
     }
 }
@@ -335,15 +351,19 @@ impl Processor {
         // 3 - initialize newest buffer length (param length)
         // 4 - set buffer with ID from bus as input (JS puts key presses in all input buffers)
         // 5 - set buffer with ID from bus as output (JS will take output and apply to whatever it likes)
-        //      buffer ID 1 - terminal output
-        //      buffer ID 2 - drawing output
-        //      buffer ID 3 - file output
-        // 6 - clear buffer with ID from bus (JS drops buffer)
-        // 7 - reset buffer with ID from bus (moves JS buffer head back to start)
-        // 8 - ready file with filename pointer (param address) 
+        // 6 - set newest output buffer type:
+        //      1 - terminal output
+        //      2 - drawing output
+        //      3 - file output
+        //      4 - set color palette (up to 256 * 3 [768] length)
+        //      5 - changed memory locations
+        // 7 - clear buffer with ID from bus (JS drops buffer)
+        // 8 - reset buffer with ID from bus (moves JS buffer head back to start)
+        // 9 - ready file with filename pointer (param address) 
         //      [follow with syscall 9]
-        // 9 - load file contents into buffer with ID from bus (must be an input buffer)
-        // 10 - sleep (param ms time)
+        // 10 - load file contents into buffer with ID from bus (must be an input buffer)
+        // 11 - sleep (param ms time)
+        // 12 - flush buffer with ID from bus to JS (JS will not automatically refresh buffers)
 
         let advance = match op {
             0 => {
@@ -549,7 +569,7 @@ impl Processor {
     // opcode 15
     fn syscall(&mut self, param: i64) {
         let code = self.bus;
-        syscall(code, param);
+        self.bus = syscall(code, param) as i64;
     }
 
     // opcode 18

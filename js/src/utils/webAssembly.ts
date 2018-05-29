@@ -1,4 +1,4 @@
-import { SMap } from "./utilTypes";
+import { SMap, Maybe, Just, prop, None } from "./utilTypes";
 
 interface RustString {
 
@@ -10,6 +10,7 @@ export interface WasmExports {
     r_RemoveBreakpoint: (b: number) => void;
     r_Continue: () => void;
     r_SetMemoryLocation: (location: number, value: number) => void;
+    r_GetMemoryLocation: (location: number) => number;
     r_StepOver: () => void;
     r_GetInstructionPointer: () => number;
     // r_GetMemory: (blockNum: number) => number[];
@@ -22,9 +23,9 @@ export interface WasmExports {
 }
 
 const data: {
-    instance: WebAssembly.Instance | null,
+    instance: Maybe<WebAssembly.Instance>;
 } = {
-    instance: null,
+    instance: None<WebAssembly.Instance>(),
 };
 
 /**
@@ -32,32 +33,32 @@ const data: {
  * TODO: deallocation?
  * @param str the text to copy
  */
-export function CopyStringToRust(str: string): RustString {
-    if (data.instance === null) return;
-
-    let exports = GetWasmExports();
-
+export function CopyStringToRust(str: string): Maybe<RustString> {
     const encoder = new TextEncoder();
     const encodedString = encoder.encode(str);
+    
+    if (data.instance.value() === null) return None<RustString>();
+    
+    return GetWasmExports().map(wasm => {
+        const rustString = wasm.stringPrepare(encodedString.length);
 
-    const rustString = exports.stringPrepare(encodedString.length);
+        const rustStringData = wasm.stringData(rustString);
+        const asBytes = new Uint8Array(data.instance.prop('exports').unwrap().memory.buffer, rustStringData, encodedString.length);
 
-    const rustStringData = exports.stringData(rustString);
-    const asBytes = new Uint8Array(data.instance.exports.memory.buffer, rustStringData, encodedString.length);
+        asBytes.set(encodedString);
 
-    asBytes.set(encodedString);
-
-    return rustString;
+        return rustString;
+    });
 }
 
 /**
  * Returns all functions exposed in rust.
  */
-export function GetWasmExports() {
-    return data.instance.exports as WasmExports;
+export function GetWasmExports(): Maybe<WasmExports> {
+    return data.instance.prop('exports');
 }
 function setWasmExport(instance: WebAssembly.Instance) {
-    data.instance = instance;
+    data.instance = Just(instance);
 }
 
 export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: number) => {
@@ -72,7 +73,7 @@ export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: 
  */
 export const loadWasmAsync = async (filepath: string, wasmImports: any): Promise<void> => {
     if (data.instance !== null) {
-        return null;
+        return;
     }
 
     let response = await fetch(filepath);

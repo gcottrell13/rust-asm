@@ -1,10 +1,13 @@
 import * as React from 'react';
 import { GetBlock, GetInstructionPointer } from '../utils/rustUtils';
 import { Glyphicon } from 'react-bootstrap';
-import { GetStatus } from '../utils/controlUtils';
 import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
+import { CheckStatus } from '../utils/controlUtils';
+import { AddListener } from '../utils/debuggerEvents';
+import { Events } from '../utils/enums/Events';
 
 export interface TextViewerProps {
+    blocksToDisplay: number[];
 }
 
 interface IState {
@@ -20,17 +23,32 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
         topLine: 1,
     };
 
-    componentWillMount() {
-        let block = GetBlock(0);
+    refreshMemory() {
         let memory: number[] = [];
 
-        block.forEach((value, index) => {
-            memory[index] = value;
+        this.props.blocksToDisplay.map(blockNum => {
+            GetBlock(blockNum).map(block => {
+                block.forEach((value, index) => {
+                    memory[index] = value;
+                });
+            })
         })
 
         this.setState({
             memory,
         });
+    }
+
+    componentWillMount() {
+        this.refreshMemory();
+        AddListener(Events.PAUSE, this.Pause);
+    }
+
+    Continue = () => {
+        this.setState({});
+    };
+    Pause = () => {
+        this.refreshMemory();
     }
 
     onClickLine = (lineNumber: number) => {
@@ -68,7 +86,7 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 
         let viewableLines: number = window.innerHeight / 20 - 1;
 
-        if (GetStatus() === ProcessorStatus.Paused) {
+        if (CheckStatus([ProcessorStatus.Paused])) {
             pausedOn = GetInstructionPointer();
         }
 
@@ -82,8 +100,8 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
                 break;
             }
 
-            if (value === 0) {
-                nullsFound ++;
+            if (value === 0 && Math.abs(index - pausedOn) > 2) {
+                // nullsFound ++;
             }
             else {
                 nullsFound = 0;
