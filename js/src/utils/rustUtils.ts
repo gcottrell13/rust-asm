@@ -4,7 +4,7 @@ import { ProcessorStatus } from "./enums/ProcessorStatus";
 import { Trigger } from "./debuggerEvents";
 import { Events } from "./enums/Events";
 
-const MEM_SIZE = 2048;
+let MEM_SIZE = 2048;
 
 const blocks: NMap<number[]> = {};
 
@@ -13,9 +13,7 @@ const blocks: NMap<number[]> = {};
  * @param n the block number
  */
 export function GetBlock(n: number): Maybe<number[]> {
-    if (blocks[n] !== undefined)
-        return Just(blocks[n]);
-    return None<number[]>();
+    return Maybe(blocks[n]);
 }
 
 // ------------------------------------------------------------------------------------
@@ -59,7 +57,7 @@ export function syscall(code: number, arg: number) {
 export function Initialize(text: string) {
     let rString = CopyStringToRust(text);
     let exports = GetWasmExports();
-    exports.map(e => rString.map(r => e.r_Initialize(r)));
+    rString.map(r => exports.r_Initialize(r));
     
     Trigger(Events.LOAD);
 }
@@ -70,25 +68,25 @@ export function Initialize(text: string) {
  */
 export function Continue() {
     let exports = GetWasmExports();
-    exports.map(e => e.r_Continue());
+    exports.r_Continue();
 }
 
 /**
  * If the rust processor is paused, a single operation will be performed.
  */
 export function StepOver() {
-    GetWasmExports().map(e => e.r_StepOver());
+    GetWasmExports().r_StepOver();
 }
 
 export function GetMemoryLocation(location: number): number {
-    return GetWasmExports().map(e => e.r_GetMemoryLocation(location)).unwrap();
+    return GetWasmExports().r_GetMemoryLocation(location);
 }
 
 /**
  * Returns the current instruction pointer of the rust processor.
  */
 export function GetInstructionPointer(): number {
-    return GetWasmExports().prop('r_GetInstructionPointer').unwrap()();
+    return GetWasmExports().r_GetInstructionPointer();
 }
 
 /**
@@ -97,7 +95,7 @@ export function GetInstructionPointer(): number {
  * @param b the line number to add a breakpoint to.
  */
 export function SetBreakpoint(b: number) {
-    GetWasmExports().prop('r_SetBreakpoint').unwrap()(b);
+    GetWasmExports().r_SetBreakpoint(b);
 }
 
 /**
@@ -106,5 +104,20 @@ export function SetBreakpoint(b: number) {
  * @param b the line number to remove a breakpoint from
  */
 export function RemoveBreakpoint(b: number) {
-    GetWasmExports().prop('r_RemoveBreakpoint').unwrap()(b);
+    GetWasmExports().r_RemoveBreakpoint(b);
+}
+
+/**
+ * Gets the memory block size from rust
+ */
+export function UpdateMemoryBlockSize() {
+    MEM_SIZE = GetWasmExports().r_GetMemoryBlockSize();
+}
+
+/**
+ * Returns the WASM memory location of the requested location in the rust vm
+ * @param location the location in the rust vm
+ */
+export function GetWasmMemoryLocation(location: number): number {
+    return GetWasmExports().r_GetWasmMemoryLocation(location);
 }

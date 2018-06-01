@@ -38,25 +38,22 @@ export function StepOverProgram() {
 // Meant for private use only
 
 function UpdateStatusCacheWithAuthoritative() {
-    status = GetWasmExports()
-        .prop('r_GetProcessorStatus')
-        .map(f => {
-            switch (f()) {
-                case 0:
-                    return ProcessorStatus.Paused;
-                case 1:
-                    return ProcessorStatus.Halted;
-                case 2:
-                    return ProcessorStatus.NotStarted;
-                case 3:
-                    return ProcessorStatus.Running;
-                case 4:
-                    return ProcessorStatus.Empty;
-                default:
-                    return ProcessorStatus.Unknown;
-            }
-        })
-        .unwrap();
+    status = (() => {
+        switch (GetWasmExports().r_GetProcessorStatus()) {
+            case 0:
+                return ProcessorStatus.Paused;
+            case 1:
+                return ProcessorStatus.Halted;
+            case 2:
+                return ProcessorStatus.NotStarted;
+            case 3:
+                return ProcessorStatus.Running;
+            case 4:
+                return ProcessorStatus.Empty;
+            default:
+                return ProcessorStatus.Unknown;
+        }
+    })();
 }
 
 

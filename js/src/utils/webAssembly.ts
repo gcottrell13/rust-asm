@@ -1,4 +1,4 @@
-import { SMap, Maybe, Just, prop, None } from "./utilTypes";
+import { SMap, Maybe, prop } from "./utilTypes";
 
 interface RustString {
 
@@ -18,6 +18,8 @@ export interface WasmExports {
     r_GetProcessorStatus: () => number;
     r_EnableBreakpoints: () => void;
     r_DisableBreakpoints: () => void;
+    r_GetMemoryBlockSize: () => number;
+    r_GetWasmMemoryLocation: (location: number) => number;
     stringPrepare: (length: number) => RustString;
     stringData: (str: RustString) => RustStringData;
 }
@@ -25,7 +27,7 @@ export interface WasmExports {
 const data: {
     instance: Maybe<WebAssembly.Instance>;
 } = {
-    instance: None<WebAssembly.Instance>(),
+    instance: Maybe<WebAssembly.Instance>(),
 };
 
 /**
@@ -37,28 +39,29 @@ export function CopyStringToRust(str: string): Maybe<RustString> {
     const encoder = new TextEncoder();
     const encodedString = encoder.encode(str);
     
-    if (data.instance.value() === null) return None<RustString>();
+    if (data.instance.value() === null) return Maybe<RustString>();
     
-    return GetWasmExports().map(wasm => {
-        const rustString = wasm.stringPrepare(encodedString.length);
+    const wasm = GetWasmExports();
+    const rustString = wasm.stringPrepare(encodedString.length);
 
-        const rustStringData = wasm.stringData(rustString);
-        const asBytes = new Uint8Array(data.instance.prop('exports').unwrap().memory.buffer, rustStringData, encodedString.length);
+    const rustStringData = wasm.stringData(rustString);
+    const asBytes = new Uint8Array(data.instance.prop('exports').unwrap().memory.buffer, rustStringData, encodedString.length);
 
-        asBytes.set(encodedString);
+    asBytes.set(encodedString);
 
-        return rustString;
-    });
+    return Maybe(rustString);
 }
 
 /**
  * Returns all functions exposed in rust.
  */
-export function GetWasmExports(): Maybe<WasmExports> {
-    return data.instance.prop('exports');
+export function GetWasmExports(): WasmExports {
+    return data.instance.prop('exports').unwrap() as WasmExports;
 }
 function setWasmExport(instance: WebAssembly.Instance) {
-    data.instance = Just(instance);
+    data.instance = Maybe(instance);
+    
+    (window as any).WasmExports = instance.exports;
 }
 
 export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: number) => {
@@ -72,7 +75,7 @@ export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: 
  * @param wasmImports the js functions that are to be imported to rust
  */
 export const loadWasmAsync = async (filepath: string, wasmImports: any): Promise<void> => {
-    if (data.instance !== null) {
+    if (data.instance.value() !== null) {
         return;
     }
 

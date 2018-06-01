@@ -33,23 +33,23 @@ export interface Maybe<T> {
     prop<O extends keyof T>(propName: O): Maybe<T[O]>;
 }
 
-export class NoneType<T> implements Maybe<T> {
+export class None<T> implements Maybe<T> {
     value() {
-        return null as any as T;
+        return null;
     }
     unwrap() {
-        return this.value();
+        return null as any as T;
     }
 
     map<R>(mapFn: MapFunction<T, R | null>) {
-        return None<R>();
+        return new None<R>();
     }
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
-        return None<T[O]>();
+        return new None<T[O]>();
     }
 }
 
-export class JustType<T> implements Maybe<T> {
+export class Just<T> implements Maybe<T> {
     $value: T;
     constructor(v: T) {
         this.$value = v;
@@ -65,36 +65,28 @@ export class JustType<T> implements Maybe<T> {
     map<R>(mapFn: MapFunction<T, R | null>): Maybe<R> {
         let newValue = mapFn(this.$value);
         if (newValue === null) {
-            return None<R>();
+            return new None<R>();
         }
-        return Just<R>(newValue);
+        return new Just<R>(newValue);
     }
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
-        return Just(this.$value[propName]);
+        return new Just(this.$value[propName]);
     }
 }
 
-export function Maybe<T>(value: T | null | undefined): Maybe<T> {
+export function Maybe<T>(value?: T | null | undefined): Maybe<T> {
     if (value === null || value === undefined) {
-        return None<T>();
+        return new None<T>();
     }
-    return Just(value);
-}
-
-export function None<T>() {
-    return new NoneType<T>();
-}
-
-export function Just<T>(value: T) {
-    return new JustType<T>(value);
+    return new Just(value);
 }
 
 export function prop<T, O extends keyof T>(obj: T, propName: O): Maybe<T[O]> {
     let v = obj[propName];
     if (v !== undefined) {
-        return Just(v);
+        return new Just(v);
     }
-    return None<T[O]>();
+    return new None<T[O]>();
 }
 
 // curry :: ((a, b, ...) -> c) -> a -> b -> ... -> c

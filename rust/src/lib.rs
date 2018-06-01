@@ -14,19 +14,35 @@ use std::sync::Mutex;
 use std::collections::{HashSet, HashMap};
 use std::os::raw::{c_double, c_float, c_int};
 
+enum StopCode {
+    Pause,
+    Halt,
+    None,
+}
+
+enum ProcessorStatus {
+    Paused,
+    Halted,
+    NotStarted,
+    Running,
+    Empty,
+}
+const MEM_SIZE: usize = 2048;
+const MAX_FILE_BLOCKS: usize = 2;
+
 extern "C" {
     fn js_setMemoryLocation(location: c_int, value: c_int);
     fn js_syscall(code: c_int, argument: c_int) -> c_int;
 }
 
 #[no_mangle]
-pub extern "C" fn r_SetBreakpoint(n: u64) {
-    SetBreakpoint(n);
+pub extern "C" fn r_SetBreakpoint(n: c_int) {
+    SetBreakpoint(n as u64);
 }
 
 #[no_mangle]
-pub extern "C" fn r_RemoveBreakpoint(n: u64) {
-    RemoveBreakpoint(n);
+pub extern "C" fn r_RemoveBreakpoint(n: c_int) {
+    RemoveBreakpoint(n as u64);
 }
 
 #[no_mangle]
@@ -35,13 +51,13 @@ pub extern "C" fn r_Continue() {
 }
 
 #[no_mangle]
-pub extern "C" fn r_SetMemoryLocation(location: u64, value: i64) {
-    SetMemoryLocation(location, value);
+pub extern "C" fn r_SetMemoryLocation(location: c_int, value: c_int) {
+    SetMemoryLocation(location as u64, value as i64);
 }
 
 #[no_mangle]
-pub extern "C" fn r_GetMemoryLocation(location: u64) -> c_int {
-    return GetMemoryLocation(location);
+pub extern "C" fn r_GetMemoryLocation(location: c_int) -> c_int {
+    return GetMemoryLocation(location as u64);
 }
 
 #[no_mangle]
@@ -95,22 +111,16 @@ pub extern "C" fn r_Initialize(jsString: JsInteropString) {
     ParseInputProgram(lines);
 }
 
-enum StopCode {
-    Pause,
-    Halt,
-    None,
+#[no_mangle]
+pub extern "C" fn r_GetMemoryBlockSize() -> c_int {
+    return MEM_SIZE as c_int;
 }
 
-enum ProcessorStatus {
-    Paused,
-    Halted,
-    NotStarted,
-    Running,
-    Empty,
+#[no_mangle]
+pub extern "C" fn r_GetWasmMemoryLocation(location: c_int) -> c_int {
+    let program = &mut MAIN_PROGRAM.lock().unwrap();
+    return program.Processor._get_pointer(location as u64);
 }
-
-const MEM_SIZE: usize = 2048;
-const MAX_FILE_BLOCKS: usize = 2;
 
 lazy_static! {
     static ref MAIN_PROGRAM: Mutex<Program> = Mutex::new(Program::new());
@@ -706,7 +716,11 @@ impl Processor {
         let offset = location as usize % MEM_SIZE;
         let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
-        self.regions[region_num].memory[offset]
+        if region_num < self.regions.len() {
+            return self.regions[region_num].memory[offset];
+        }
+
+        return 0;
     }
 
     // helper
@@ -715,6 +729,18 @@ impl Processor {
         let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
         self.regions[region_num].memory[offset] = value;
+    }
+
+    fn _get_pointer(&self, location: u64) -> i32 {
+        let offset = location as usize % MEM_SIZE;
+        let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
+
+        if region_num < self.regions.len() {
+            let a = &self.regions[region_num].memory[offset] as *const i64;
+            return a as i32;
+        }
+
+        return 0;
     }
 }
 
