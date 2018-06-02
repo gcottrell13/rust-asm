@@ -1,5 +1,6 @@
-import { NMap } from "../utilTypes";
-import { GetMemoryLocation, setMemoryLocation } from "../rustUtils";
+import { NMap, Maybe } from "../utilTypes";
+import * as _ from 'lodash';
+import { setMemoryLocation, GetMemoryBuffer } from "../rustUtils";
 
 enum BufferType {
     FROM_WASM,
@@ -22,80 +23,74 @@ interface Buffer {
 
 const buffers: NMap<Buffer> = {};
 
-function NewBuffer(id: number) {
-    if (!buffers[id]) {
-        buffers[id] = {
-            length: 0,
-            head: 0,
-            id,
-            type: BufferType.NONE,
-            contents: [],
-        };
-        return Result.OK;
-    }
-    return Result.ERROR;
+function InitBuffer(id: number) {
+    return Maybe(buffers[id])
+        .match(() => Result.ERROR, () => {
+            buffers[id] = {
+                length: 0,
+                head: 0,
+                id,
+                type: BufferType.NONE,
+                contents: [],
+            };
+            return Result.OK;
+        }).unwrap();
 }
 
-export const Syscall = {
-    InitBuffer: (id: number) => {
-        return NewBuffer(id);
-    },
-    SetBufferStart: (id: number, head: number) => {
-        if (buffers[id] && buffers[id].type === BufferType.NONE) {
-            buffers[id].head = head;
-            return Result.OK;
-        }
-        return Result.ERROR;
-    },
-    SetBufferLength: (id: number, length: number) => {
-        if (buffers[id] && buffers[id].type === BufferType.NONE) {
-            buffers[id].length = length;
-            return Result.OK;
-        }
-        return Result.ERROR;
-    },
-    SetBufferAsInput: (id: number) => {
-        if (buffers[id] && buffers[id].type === BufferType.NONE) {
-            buffers[id].type = BufferType.TO_WASM;
-            return Result.OK;
-        }
-        return Result.ERROR;
-    },
-    SetBufferAsOutput: (id: number) => {
-        if (buffers[id] && buffers[id].type === BufferType.NONE) {
-            buffers[id].type = BufferType.FROM_WASM;
-            return Result.OK;
-        }
-        return Result.ERROR;
-    },
-};
+function SetBufferStart(id: number, head: number) {
+    Maybe(buffers[id])
+        .filter(buffer => buffer.type === BufferType.NONE)
+        .on(buffer => buffer.head = head)
+        .match(() => Result.OK, () => Result.ERROR);
+}
+
+function SetBufferLength(id: number, length: number) {
+    Maybe(buffers[id])
+        .filter(buffer => buffer.type === BufferType.NONE)
+        .on(buffer => buffer.length = length)
+        .match(() => Result.OK, () => Result.ERROR);
+}
+
+function SetBufferAsInput(id: number) {
+    Maybe(buffers[id])
+        .filter(buffer => buffer.type === BufferType.NONE)
+        .on(buffer => buffer.type = BufferType.TO_WASM)
+        .match(() => Result.OK, () => Result.ERROR);
+}
+
+function SetBufferAsOutput(id: number) {
+    Maybe(buffers[id])
+        .filter(buffer => buffer.type === BufferType.NONE)
+        .on(buffer => buffer.type = BufferType.FROM_WASM)
+        .match(() => Result.OK, () => Result.ERROR);
+}
 
 export function GetSyscallWithNumber(n: number) {
     switch (n) {
         case 1:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 2:
-            return Syscall.SetBufferStart;
+            return SetBufferStart;
         case 3:
-            return Syscall.SetBufferLength;
+            return SetBufferLength;
         case 4:
-            return Syscall.SetBufferAsInput;
+            return SetBufferAsInput;
         case 5:
-            return Syscall.SetBufferAsOutput;
+            return SetBufferAsOutput;
         case 6:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 7:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 8:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 9:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 10:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 11:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         case 12:
-            return Syscall.InitBuffer;
+            return InitBuffer;
         default:
             return () => Result.ERROR;
     }
@@ -105,31 +100,48 @@ export function GetSyscallWithNumber(n: number) {
  * All input buffers will refresh their contents
  */
 export function WriteAllBuffersToWasm() {
-    for (let e in buffers) {
-        let buffer = buffers[e]
-
-        if (buffer.type === BufferType.TO_WASM) {
-            // TODO: a better way to do this
-            for (let index = buffer.head, c_index = 0; c_index < buffer.length; index++ , c_index++) {
-                setMemoryLocation(index, buffer.contents[c_index]);
-            }
-        }
-    }
+    _.values(buffers)
+        .filter(buffer => buffer.type === BufferType.TO_WASM)
+        .map(buffer => {
+            GetMemoryBuffer(buffer.head, buffer.length).map(array => {
+                array.set(buffer.contents.slice(0, array.length));
+            });
+        });
 }
 
+/**
+ * Puts text into a buffer that will be written to rust memory later
+ * @param id buffer id
+ * @param text text to put into buffer
+ */
 export function WriteToBuffer(id: number, text: number[]): void {
-    if (buffers[id]) {
-        var buffer = buffers[id];
-        if (buffer.type === BufferType.TO_WASM)
-            buffer.contents = text.slice(0, buffer.length);
-    }
+    Maybe(buffers[id])
+        .filter(b => b.type === BufferType.TO_WASM)
+        .on(b => {
+            b.contents = text.slice(0, b.length);
+        });
 }
 
-export function ReadFromBuffer(id: number): number[] | null {
-    if (buffers[id]) {
-        var buffer = buffers[id];
-        if (buffer.type === BufferType.FROM_WASM)
-            return buffer.contents;
-    }
-    return null;
+/**
+ * Returns text that was read from rust memory earlier
+ * @param id buffer id
+ */
+export function ReadFromBuffer(id: number): Maybe<number[]> {
+    return Maybe(buffers[id])
+        .filter(b => b.type === BufferType.FROM_WASM)
+        .map(b => b.contents);
 }
+
+
+(window as any).Syscall = {
+    WriteAllBuffersToWasm,
+    WriteToBuffer,
+    ReadFromBuffer,
+    InitBuffer,
+    SetBufferAsInput,
+    SetBufferAsOutput,
+    SetBufferLength,
+    SetBufferStart,
+    GetSyscallWithNumber,
+    GetMemoryBuffer,
+};

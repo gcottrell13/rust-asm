@@ -1,4 +1,4 @@
-import { CopyStringToRust, GetWasmExports } from "./webAssembly";
+import { GetWasmExports } from "./webAssembly";
 import { NMap, Maybe, Just, None } from "./utilTypes";
 import { ProcessorStatus } from "./enums/ProcessorStatus";
 import { Trigger } from "./debuggerEvents";
@@ -6,14 +6,21 @@ import { Events } from "./enums/Events";
 
 let MEM_SIZE = 2048;
 
-const blocks: NMap<number[]> = {};
+export function GetMemoryBuffer(location: number, length: number): Maybe<Int32Array> {
+    let memoryLocation = GetWasmExports().r_GetWasmMemoryLocation(location);
+    if (memoryLocation === 0) {
+        return Maybe<Int32Array>();
+    }
+    let left = MEM_SIZE - location % MEM_SIZE;
+    return Maybe(new Int32Array(GetWasmExports().memory.buffer, memoryLocation, Math.min(left, length)));
+}
 
 /**
- * Returns one of the cached memory blocks stored in the JS side
+ * Returns a block of memory
  * @param n the block number
  */
-export function GetBlock(n: number): Maybe<number[]> {
-    return Maybe(blocks[n]);
+export function GetBlock(n: number): Maybe<Int32Array> {
+    return GetMemoryBuffer(n * MEM_SIZE, MEM_SIZE);
 }
 
 // ------------------------------------------------------------------------------------
@@ -26,14 +33,8 @@ export function GetBlock(n: number): Maybe<number[]> {
  * @param value the value to be stored
  */
 export function setMemoryLocation(location: number, value: number) {
-    let blockNum = Math.floor(location / MEM_SIZE);
-    let position = location % MEM_SIZE;
-
-    if (!blocks[blockNum]) {
-        blocks[blockNum] = [];
-    }
-
-    blocks[blockNum][position] = value;
+    let loc = GetMemoryBuffer(location, 1);
+    loc.map(buffer => buffer.set([value]));
 }
 
 /**
@@ -55,9 +56,12 @@ export function syscall(code: number, arg: number) {
  * @param text the program text
  */
 export function Initialize(text: string) {
-    let rString = CopyStringToRust(text);
     let exports = GetWasmExports();
-    rString.map(r => exports.r_Initialize(r));
+    exports.r_Initialize();
+    // TODO: parse the text first THEN send into program memory
+    let asBytes = (new TextEncoder()).encode(text).slice(0, MEM_SIZE);
+
+    GetBlock(0).on(b => b.set(asBytes));
     
     Trigger(Events.LOAD);
 }
@@ -76,10 +80,6 @@ export function Continue() {
  */
 export function StepOver() {
     GetWasmExports().r_StepOver();
-}
-
-export function GetMemoryLocation(location: number): number {
-    return GetWasmExports().r_GetMemoryLocation(location);
 }
 
 /**
@@ -121,3 +121,11 @@ export function UpdateMemoryBlockSize() {
 export function GetWasmMemoryLocation(location: number): number {
     return GetWasmExports().r_GetWasmMemoryLocation(location);
 }
+
+(window as any).RustUtils = {
+    GetWasmMemoryLocation,
+    setMemoryLocation,
+    GetBlock,
+    GetMemoryBuffer,
+    MemSize: () => MEM_SIZE,
+};

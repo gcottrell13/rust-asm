@@ -14,14 +14,11 @@ let height: number = 4;
  * To be called via syscall
  */
 export function SyscallSwapScreenBuffer() {
-    let newContents = ReadFromBuffer(2) || [];
-
-    newContents.forEach((value, index) => {
+    ReadFromBuffer(2).map(b => b.forEach((value, index) => {
         if (value != screenBuffer[index]) {
             DrawPixel(index, value);
         }
-    });
-
+    }));
 }
 
 function DrawPixel(index: number, paletteId: number) {

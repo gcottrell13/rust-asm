@@ -1,27 +1,18 @@
-import { SMap, Maybe, prop } from "./utilTypes";
-
-interface RustString {
-
-}
-type RustStringData = number;
+import { SMap, Maybe } from "./utilTypes";
 
 export interface WasmExports {
     r_SetBreakpoint: (b: number) => void;
     r_RemoveBreakpoint: (b: number) => void;
     r_Continue: () => void;
-    r_SetMemoryLocation: (location: number, value: number) => void;
-    r_GetMemoryLocation: (location: number) => number;
     r_StepOver: () => void;
     r_GetInstructionPointer: () => number;
-    // r_GetMemory: (blockNum: number) => number[];
-    r_Initialize: (text: RustString) => void;
+    r_Initialize: () => void;
     r_GetProcessorStatus: () => number;
     r_EnableBreakpoints: () => void;
     r_DisableBreakpoints: () => void;
     r_GetMemoryBlockSize: () => number;
     r_GetWasmMemoryLocation: (location: number) => number;
-    stringPrepare: (length: number) => RustString;
-    stringData: (str: RustString) => RustStringData;
+    memory: WebAssembly.Memory;
 }
 
 const data: {
@@ -29,28 +20,6 @@ const data: {
 } = {
     instance: Maybe<WebAssembly.Instance>(),
 };
-
-/**
- * Prepares and copies the given string to rust.
- * TODO: deallocation?
- * @param str the text to copy
- */
-export function CopyStringToRust(str: string): Maybe<RustString> {
-    const encoder = new TextEncoder();
-    const encodedString = encoder.encode(str);
-    
-    if (data.instance.value() === null) return Maybe<RustString>();
-    
-    const wasm = GetWasmExports();
-    const rustString = wasm.stringPrepare(encodedString.length);
-
-    const rustStringData = wasm.stringData(rustString);
-    const asBytes = new Uint8Array(data.instance.prop('exports').unwrap().memory.buffer, rustStringData, encodedString.length);
-
-    asBytes.set(encodedString);
-
-    return Maybe(rustString);
-}
 
 /**
  * Returns all functions exposed in rust.

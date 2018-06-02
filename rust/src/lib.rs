@@ -1,5 +1,4 @@
 #![allow(non_snake_case, unused_imports)]
-#![feature(repr_transparent)]
 
 #[macro_use] 
 extern crate lazy_static;
@@ -28,21 +27,19 @@ enum ProcessorStatus {
     Empty,
 }
 const MEM_SIZE: usize = 2048;
-const MAX_FILE_BLOCKS: usize = 2;
 
 extern "C" {
-    fn js_setMemoryLocation(location: c_int, value: c_int);
     fn js_syscall(code: c_int, argument: c_int) -> c_int;
 }
 
 #[no_mangle]
 pub extern "C" fn r_SetBreakpoint(n: c_int) {
-    SetBreakpoint(n as u64);
+    SetBreakpoint(n as u32);
 }
 
 #[no_mangle]
 pub extern "C" fn r_RemoveBreakpoint(n: c_int) {
-    RemoveBreakpoint(n as u64);
+    RemoveBreakpoint(n as u32);
 }
 
 #[no_mangle]
@@ -51,18 +48,15 @@ pub extern "C" fn r_Continue() {
 }
 
 #[no_mangle]
-pub extern "C" fn r_SetMemoryLocation(location: c_int, value: c_int) {
-    SetMemoryLocation(location as u64, value as i64);
-}
-
-#[no_mangle]
-pub extern "C" fn r_GetMemoryLocation(location: c_int) -> c_int {
-    return GetMemoryLocation(location as u64);
-}
-
-#[no_mangle]
 pub extern "C" fn r_StepOver() {
     StepOver();
+}
+
+#[no_mangle]
+pub extern "C" fn r_Initialize() {
+    let program = &mut MAIN_PROGRAM.lock().unwrap(); 
+    program.Processor.add_region(MemoryBlock::new());
+    program.Processor.status = ProcessorStatus::NotStarted;
 }
 
 #[no_mangle]
@@ -96,22 +90,6 @@ pub extern "C" fn r_DisableBreakpoints() {
 }
 
 #[no_mangle]
-pub extern "C" fn r_Initialize(jsString: JsInteropString) {
-    let mut lines: Vec<&str> = Vec::new();
-
-    unsafe {
-        let text = jsString.as_string();
-        let split = text.split("\n");
-
-        for line in split {
-            lines.push(line);
-        }
-    }
-
-    ParseInputProgram(lines);
-}
-
-#[no_mangle]
 pub extern "C" fn r_GetMemoryBlockSize() -> c_int {
     return MEM_SIZE as c_int;
 }
@@ -119,53 +97,11 @@ pub extern "C" fn r_GetMemoryBlockSize() -> c_int {
 #[no_mangle]
 pub extern "C" fn r_GetWasmMemoryLocation(location: c_int) -> c_int {
     let program = &mut MAIN_PROGRAM.lock().unwrap();
-    return program.Processor._get_pointer(location as u64);
+    return program.Processor._get_pointer(location as u32);
 }
 
 lazy_static! {
     static ref MAIN_PROGRAM: Mutex<Program> = Mutex::new(Program::new());
-}
-
-fn ParseInputProgram(lines: Vec<&str>) {
-    let zero: u8 = 48; // ascii 0
-    let nine: u8 = 57; // ascii 9
-
-    let processor = &mut MAIN_PROGRAM.lock().unwrap()
-            .Processor;
-
-    // parse out the source file
-    let mut location: usize = 1;
-    for line in lines {
-        // we can't read in any more lines
-        if location >= MEM_SIZE {
-            // panic!("Cannot read any more lines, reached max of {}", MEM_SIZE);
-            break;
-        }
-
-        let mut number: u64 = 0;
-        let mut sign = 1;
-        for c in line.chars() {
-            let byte = c as u8;
-            if byte >= zero && byte <= nine { 
-                // only read in numbers
-                number = number * 10 + (byte - zero) as u64;
-            }
-            else if byte == 45 {
-                sign = -1;
-            }
-            else {
-                break;
-            }
-        }
-        processor._set_memory_loc(location as u64, (number as i64) * sign);
-        jsSetMemoryLocation(location as i32, (number as i32) * sign as i32);
-        location += 1;
-    }
-
-    //
-    processor.add_region(MemoryBlock::new());
-
-    processor.status = ProcessorStatus::NotStarted;
 }
 
 fn run() {
@@ -210,43 +146,24 @@ fn step(program: &mut Program) -> bool {
     return false;
 }
 
-fn syscall(code: i64, arg: i64) -> i32 {
+fn syscall(code: i32, arg: i32) -> i32 {
     unsafe {
-        return js_syscall(code as i32, arg as i32);
+        return js_syscall(code, arg);
     }
 }
 
-fn jsSetMemoryLocation(location: c_int, value: c_int) {
-    unsafe {
-        js_setMemoryLocation(location, value);
-    }
-}
-
-fn SetBreakpoint(point: u64) {
+fn SetBreakpoint(point: u32) {
     let mut prog = MAIN_PROGRAM.lock().unwrap();
     if !prog.Breakpoints.contains(&point) {
         prog.Breakpoints.insert(point);
     }
 }
 
-fn RemoveBreakpoint(point: u64) {
+fn RemoveBreakpoint(point: u32) {
     let mut prog = MAIN_PROGRAM.lock().unwrap();
     if prog.Breakpoints.contains(&point) {
         prog.Breakpoints.remove(&point);
     }
-}
-
-fn SetMemoryLocation(location: u64, value: i64) {
-    let processor = &mut MAIN_PROGRAM.lock().unwrap()
-        .Processor;
-    processor._set_memory_loc(location, value);
-    jsSetMemoryLocation(location as c_int, value as c_int);
-}
-
-fn GetMemoryLocation(location: u64) -> c_int {
-    let processor = &mut MAIN_PROGRAM.lock().unwrap()
-        .Processor;
-    return processor._get_memory_loc(location) as c_int;
 }
 
 // fn GetMemoryByBlock(blockNum: u32) -> Vec<f32> {
@@ -279,7 +196,7 @@ fn StepOver() {
 
 struct Program {
     Processor: Processor,
-    Breakpoints: HashSet<u64>,
+    Breakpoints: HashSet<u32>,
     DoBreakpoints: bool,
 }
 impl Program {
@@ -296,9 +213,9 @@ impl Program {
 }
 
 struct Processor {
-    bus: i64,
+    bus: i32,
     alu: ALU,
-    next: u64,
+    next: u32,
     status: ProcessorStatus,
     regions: Vec<MemoryBlock>,
 }
@@ -449,11 +366,11 @@ impl Processor {
                 1
             },
             18 => {
-                self.load_location(param as u64);
+                self.load_location(param as u32);
                 2
             },
             19 => {
-                self.set_location(param as u64);
+                self.set_location(param as u32);
                 2
             },
             20 => {
@@ -472,30 +389,30 @@ impl Processor {
     }
 
     // opcode 1
-    fn load_location_relative_pointer(&mut self, pointer: i64) {
+    fn load_location_relative_pointer(&mut self, pointer: i32) {
         let next = self.next;
         let value = self._r_get_memory(next, pointer);
         self.bus = value;
     }
 
     // opcode 2
-    fn set_location_relative_pointer(&mut self, pointer: i64) {
+    fn set_location_relative_pointer(&mut self, pointer: i32) {
         let next = self.next;
         let value = self.bus;
         self._r_set_memory(next, pointer, value);
     }
 
     // opcode 3
-    fn load_location_relative(&mut self, offset: i64) {
+    fn load_location_relative(&mut self, offset: i32) {
         let next = self.next;
-        self.bus = self._get_memory_loc((offset + next as i64) as u64);
+        self.bus = self._get_memory_loc((offset + next as i32) as u32);
     }
 
     // opcode 4
-    fn set_location_relative(&mut self, offset: i64) {
+    fn set_location_relative(&mut self, offset: i32) {
         let value = self.bus;
         let next = self.next;
-        self._set_memory_loc((offset + next as i64) as u64, value);
+        self._set_memory_loc((offset + next as i32) as u32, value);
     }
 
     // opcode 5
@@ -527,15 +444,15 @@ impl Processor {
     // opcode 10
     fn jump(&mut self) {
         let relative = self.bus;
-        self.next = ((self.next as i64) + relative) as u64;
+        self.next = ((self.next as i32) + relative) as u32;
     }
 
     // opcode 11
-    fn bgz(&mut self, relative: i64) -> u64 {
+    fn bgz(&mut self, relative: i32) -> u32 {
         self.alu.cmp();
         if self.alu.compare_result > 0
         {
-            self.next = ((self.next as i64) + relative) as u64;
+            self.next = ((self.next as i32) + relative) as u32;
             0
         }
         else {
@@ -544,11 +461,11 @@ impl Processor {
     }
 
     // opcode 12
-    fn blz(&mut self, relative: i64) -> u64 {
+    fn blz(&mut self, relative: i32) -> u32 {
         self.alu.cmp();
         if self.alu.compare_result < 0
         {
-            self.next = ((self.next as i64) + relative) as u64;
+            self.next = ((self.next as i32) + relative) as u32;
             0
         }
         else {
@@ -557,11 +474,11 @@ impl Processor {
     }
 
     // opcode 13
-    fn bez(&mut self, relative: i64) -> u64 {
+    fn bez(&mut self, relative: i32) -> u32 {
         self.alu.cmp();
         if self.alu.compare_result == 0
         {
-            self.next = ((self.next as i64) + relative) as u64;
+            self.next = ((self.next as i32) + relative) as u32;
             0
         }
         else {
@@ -577,28 +494,28 @@ impl Processor {
     }
 
     // opcode 15
-    fn syscall(&mut self, param: i64) {
+    fn syscall(&mut self, param: i32) {
         let code = self.bus;
-        self.bus = syscall(code, param) as i64;
+        self.bus = syscall(code, param) as i32;
     }
 
     // opcode 18
-    fn load_location(&mut self, location: u64) {
+    fn load_location(&mut self, location: u32) {
         self.bus = self._get_memory_loc(location);
     }
 
     // opcode 10
-    fn set_location(&mut self, location: u64) {
+    fn set_location(&mut self, location: u32) {
         let value = self.bus;
         self._set_memory_loc(location, value);
     }
 
     // opcode 20
-    fn load_immediate(&mut self, value: i64) {
+    fn load_immediate(&mut self, value: i32) {
         self.bus = value;
     }
 
-    // fn print(&mut self, location: u64) {
+    // fn print(&mut self, location: u32) {
     //     let mut l = location;
     //     let mut sanity = 0;
     //     while sanity < MEM_SIZE {
@@ -618,22 +535,22 @@ impl Processor {
     // }
 
     // fn print_pointer_relative(&mut self) {
-    //     let l = self.bus as u64;
+    //     let l = self.bus as u32;
     //     self.print(l);
     // }
 
     // fn print_pointer_number_relative(&mut self) {
-    //     let offset = self.bus as i64;
+    //     let offset = self.bus as i32;
     //     let next = self.next;
-    //     println!("{}", self._get_memory_loc((offset + next as i64) as u64));
+    //     println!("{}", self._get_memory_loc((offset + next as i32) as u32));
     // }
 
-    // fn open_file(&mut self, pointer_location: u64) {
+    // fn open_file(&mut self, pointer_location: u32) {
     //     let filename = self._read_location_as_string();
     //     let contents = open_file(filename.clone());
     //     if contents[0] == 1 {
     //         // create new memory blocks
-    //         let blocks_needed = (contents[2] as f64 / MEM_SIZE as f64).ceil() as i64;
+    //         let blocks_needed = (contents[2] as f64 / MEM_SIZE as f64).ceil() as i32;
     //         let mut i = 0;
     //         let bytes_loaded = contents[1];
     //         let mut bytes_transferred = 0;
@@ -656,7 +573,7 @@ impl Processor {
     //         }
 
     //         // println!("loaded {} bytes from `{}` into location {} with {} blocks created.", bytes_transferred, filename, pointer_location, blocks_needed);
-    //         self._set_memory_loc(pointer_location, file_pointer as i64);
+    //         self._set_memory_loc(pointer_location, file_pointer as i32);
     //     }
     //     else {
     //         panic!("Could not find file: `{}`", filename);
@@ -666,7 +583,7 @@ impl Processor {
     // fn dump (&mut self) {
     //     let mut nulls_encountered = 0;
     //     for i in 0 .. (MEM_SIZE * self.regions.len()) {
-    //         let byte = self._get_memory_loc(i as u64);
+    //         let byte = self._get_memory_loc(i as u32);
     //         if byte == 0 {
     //             nulls_encountered += 1;
     //         }
@@ -683,36 +600,18 @@ impl Processor {
     //     }
     // }
 
-    fn _read_location_as_string(&mut self) -> String {
-        let mut string = String::from("");
-        let mut byte: u8;
-        let mut pointer = self.bus;
-        loop {
-            byte = self._get_memory_loc(pointer as u64) as u8;
-
-            if byte != 0 {
-                string.push(byte as char);
-                pointer += 1;
-            }
-            else {
-                break;
-            }
-        }
-        string
-    }
-
-    fn _r_get_memory(&mut self, location: u64, offset: i64) -> i64 {
-        let newLocation = (location as i64 + offset) as u64;
+    fn _r_get_memory(&mut self, location: u32, offset: i32) -> i32 {
+        let newLocation = (location as i32 + offset) as u32;
         return self._get_memory_loc(newLocation);
     }
 
-    fn _r_set_memory(&mut self, location: u64, offset: i64, value: i64) {
-        let newLocation = (location as i64 + offset) as u64;
+    fn _r_set_memory(&mut self, location: u32, offset: i32, value: i32) {
+        let newLocation = (location as i32 + offset) as u32;
         self._set_memory_loc(newLocation, value);
     }
 
     // helper
-    fn _get_memory_loc(&mut self, location: u64) -> i64 {
+    fn _get_memory_loc(&mut self, location: u32) -> i32 {
         let offset = location as usize % MEM_SIZE;
         let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
@@ -724,19 +623,19 @@ impl Processor {
     }
 
     // helper
-    fn _set_memory_loc(&mut self, location: u64, value: i64) {
+    fn _set_memory_loc(&mut self, location: u32, value: i32) {
         let offset = location as usize % MEM_SIZE;
         let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
         self.regions[region_num].memory[offset] = value;
     }
 
-    fn _get_pointer(&self, location: u64) -> i32 {
+    fn _get_pointer(&self, location: u32) -> i32 {
         let offset = location as usize % MEM_SIZE;
         let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
         if region_num < self.regions.len() {
-            let a = &self.regions[region_num].memory[offset] as *const i64;
+            let a = &self.regions[region_num].memory[offset] as *const i32;
             return a as i32;
         }
 
@@ -745,9 +644,9 @@ impl Processor {
 }
 
 struct ALU {
-    value_a: i64, // recent value
-    value_b: i64, // oldest value
-    compare_result: i64,
+    value_a: i32, // recent value
+    value_b: i32, // oldest value
+    compare_result: i32,
 }
 impl ALU {
     fn new() -> ALU {
@@ -758,30 +657,30 @@ impl ALU {
         }
     }
 
-    fn push_value(&mut self, value: i64) {
+    fn push_value(&mut self, value: i32) {
         self.value_b = self.value_a;
         self.value_a = value;
     }
 
-    fn add(&mut self) -> i64 {
+    fn add(&mut self) -> i32 {
         let value = self.value_a + self.value_b;
         self.push_value(value);
         return value;
     }
 
-    fn negate(&mut self) -> i64 {
+    fn negate(&mut self) -> i32 {
         let value = -self.value_a;
         self.push_value(value);
         return value;
     }
 
-    fn multiply(&mut self) -> i64 {
+    fn multiply(&mut self) -> i32 {
         let value = self.value_a * self.value_b;
         self.push_value(value);
         return value;
     }
 
-    fn invert(&mut self) -> i64 {
+    fn invert(&mut self) -> i32 {
         let value = 1 / self.value_a;
         self.push_value(value);
         return value;
@@ -793,7 +692,7 @@ impl ALU {
 }
 
 struct MemoryBlock {
-    memory: [i64; MEM_SIZE],
+    memory: [i32; MEM_SIZE],
 }
 impl MemoryBlock {
     fn new() -> MemoryBlock {
@@ -803,131 +702,7 @@ impl MemoryBlock {
         }
     }
 
-    // fn set_value(&mut self, location: usize, value: i64) {
+    // fn set_value(&mut self, location: usize, value: i32) {
     //     self.memory[location] = value;
     // }
-}
-
-// Very important to use `transparent` to prevent ABI issues 
-#[repr(transparent)]
-pub struct JsInteropString(*mut String);
-
-impl JsInteropString {
-    // Unsafe because we create a string and say it's full of valid
-    // UTF-8 data, but it isn't!
-    unsafe fn with_capacity(cap: usize) -> Self {
-        let mut d = Vec::with_capacity(cap);
-        d.set_len(cap);
-        let s = Box::new(String::from_utf8_unchecked(d));
-        return JsInteropString(Box::into_raw(s));
-    }
-
-    unsafe fn as_string(&self) -> &String {
-        return &*self.0;
-    }
-
-    unsafe fn as_mut_string(&mut self) -> &mut String {
-        return &mut *self.0;
-    }
-
-    // unsafe fn into_boxed_string(self) -> Box<String> {
-    //     return Box::from_raw(self.0);
-    // }
-
-    unsafe fn as_mut_ptr(&mut self) -> *mut u8 {
-        return self.as_mut_string().as_mut_vec().as_mut_ptr();
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn stringPrepare(cap: usize) -> JsInteropString {
-    return JsInteropString::with_capacity(cap);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn stringData(mut s: JsInteropString) -> *mut u8 {
-    return s.as_mut_ptr();
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn stringLen(s: JsInteropString) -> usize {
-    return s.as_string().len();
-}
-
-
-#[repr(transparent)]
-pub struct JsInteropNumArray(Vec<c_int>);
-
-impl JsInteropNumArray {
-    unsafe fn with_capacity(cap: usize) -> Self {
-        let mut d = Vec::with_capacity(cap);
-        d.set_len(cap);
-        return JsInteropNumArray(d);
-    }
-
-    unsafe fn as_mut_ptr(&mut self) -> *mut c_int {
-        return &mut (self.0)[0];
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn arrayPrepare(cap: usize) -> JsInteropNumArray {
-    return JsInteropNumArray::with_capacity(cap);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn arrayData(mut s: JsInteropNumArray) -> *mut c_int {
-    return s.as_mut_ptr();
-}
-
-
-fn open_file(filename: String) -> Vec<i64> {
-    let mut contents: Vec<i64> = Vec::new();
-    let file_opened: i64 = 0;
-    let mut file_size: i64 = 0;
-    let mut bytes_loaded: i64 = 0;
-
-    let max_size: usize = MAX_FILE_BLOCKS * MEM_SIZE;
-
-    contents.push(file_opened); // [0]
-    contents.push(file_size); // [1]
-    contents.push(bytes_loaded); // [2]
-
-    match File::open(&filename) {
-        Ok(f) => {
-            let mut quit = false;
-            let file = BufReader::new(f);
-
-            for line in file.lines() {
-                let l: String = line.expect("failed line");
-                for c in l.chars() {
-                    let byte = c as i64;
-
-                    contents.push(byte);
-                    file_size += 1;
-                    bytes_loaded += 1;
-
-                    if bytes_loaded >= max_size as i64 {
-                        quit = true;
-                        break;
-                    }
-                }
-
-                if quit {
-                    break;
-                }
-
-                contents.push(10);
-            }
-
-            contents[0] = 1;
-            contents[1] = file_size;
-            contents[2] = bytes_loaded;
-        },
-        Err(m) => {
-            println!("Could not open file: {:?}", m);
-        }
-    };
-    
-    return contents;
 }

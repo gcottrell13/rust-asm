@@ -10,11 +10,14 @@ cd $THIS_SCRIPTS_DIR/../rust
 
 wasmFilename="dsl_wasm.wasm"
 
+echo "Cleaning \dist ..."
+
 rm -rf ../dist/*
 
 # Compile to wasm
 cargo +nightly build --target wasm32-unknown-unknown --release
 
+echo "Moved WASM binary to \dist"
 # Move to dist
 cp "target/wasm32-unknown-unknown/release/$wasmFilename" "../dist"
 

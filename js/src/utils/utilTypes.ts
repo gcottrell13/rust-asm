@@ -9,9 +9,15 @@ interface MapFunction<TIn, TOut> {
     (v: TIn): TOut;
 }
 
+interface FilterFunction<TIn> {
+    (v: TIn): boolean;
+}
+
+type Optional<T> = T | null | undefined;
+
 export interface Maybe<T> {
     /**
-     * Gives either the value if Just<T> or null if None
+     * Gives either the value if Just<T> or null if None.
      */
     value(): T | null;
 
@@ -21,31 +27,73 @@ export interface Maybe<T> {
     unwrap(): T;
 
     /**
-     * Applies the given function to the value, if it exists
-     * @param fn the mapping function
+     * Returns whether or not there is a value.
      */
-    map<R>(fn: MapFunction<T, R | null>): Maybe<R>;
+    hasValue(): boolean;
 
     /**
-     * Gets the given property, if it exists
+     * Applies the given function to the value, if it exists.
+     * @param fn the mapping function
+     */
+    map<R>(fn: MapFunction<T, Optional<R>>): Maybe<R>;
+
+    /**
+     * Gets the given property, if it exists.
      * @param propName the property to get
      */
     prop<O extends keyof T>(propName: O): Maybe<T[O]>;
+
+    /**
+     * Returns a value if it matches.
+     * @param fn fn
+     */
+    filter(fn: FilterFunction<T>): Maybe<T>;
+
+    /**
+     * 
+     * @param hasValue 
+     * @param empty 
+     */
+    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R>;
+    
+    /**
+     * 
+     * @param fn 
+     */
+    on(fn: (value: T) => void): Maybe<T>;
 }
 
 export class None<T> implements Maybe<T> {
     value() {
         return null;
     }
+
     unwrap() {
         return null as any as T;
     }
 
-    map<R>(mapFn: MapFunction<T, R | null>) {
+    hasValue() {
+        return false;
+    }
+
+    map<R>(mapFn: MapFunction<T, Optional<R>>) {
         return new None<R>();
     }
+
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
         return new None<T[O]>();
+    }
+    
+    filter(fn: FilterFunction<T>): Maybe<T> {
+        return this;
+    }
+
+    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R> {
+        return Maybe(empty());
+    }
+    
+    on(fn: (value: T) => void): Maybe<T> {
+        return this;
     }
 }
 
@@ -58,19 +106,38 @@ export class Just<T> implements Maybe<T> {
     value() {
         return this.$value;
     }
+
     unwrap() {
         return this.$value;
     }
 
-    map<R>(mapFn: MapFunction<T, R | null>): Maybe<R> {
+    hasValue() {
+        return true;
+    }
+
+    map<R>(mapFn: MapFunction<T, Optional<R>>): Maybe<R> {
         let newValue = mapFn(this.$value);
-        if (newValue === null) {
+        if (newValue === null || newValue === undefined) {
             return new None<R>();
         }
         return new Just<R>(newValue);
     }
+
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
         return new Just(this.$value[propName]);
+    }
+    
+    filter(fn: FilterFunction<T>): Maybe<T> {
+        return fn(this.$value) ? this : new None<T>();
+    }
+
+    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R> {
+        return Maybe(hasValue(this.$value));
+    }
+
+    on(fn: (value: T) => void): Maybe<T> {
+        fn(this.$value);
+        return this;
     }
 }
 
