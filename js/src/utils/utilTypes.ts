@@ -13,6 +13,11 @@ interface FilterFunction<TIn> {
     (v: TIn): boolean;
 }
 
+interface Matching<T> {
+    Just?: (value: T) => void, 
+    None?: () => void,
+}
+
 type Optional<T> = T | null | undefined;
 
 export interface Maybe<T> {
@@ -38,29 +43,28 @@ export interface Maybe<T> {
     map<R>(fn: MapFunction<T, Optional<R>>): Maybe<R>;
 
     /**
+     * Provides a default value if none
+     * @param fn 
+     */
+    def(fn: () => T): Maybe<T>;
+
+    /**
      * Gets the given property, if it exists.
      * @param propName the property to get
      */
     prop<O extends keyof T>(propName: O): Maybe<T[O]>;
+    
+    /**
+     * 
+     * @param m 
+     */
+    match(m: Matching<T>): Maybe<T>;
 
     /**
      * Returns a value if it matches.
      * @param fn fn
      */
     filter(fn: FilterFunction<T>): Maybe<T>;
-
-    /**
-     * 
-     * @param hasValue 
-     * @param empty 
-     */
-    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R>;
-    
-    /**
-     * 
-     * @param fn 
-     */
-    on(fn: (value: T) => void): Maybe<T>;
 }
 
 export class None<T> implements Maybe<T> {
@@ -80,19 +84,22 @@ export class None<T> implements Maybe<T> {
         return new None<R>();
     }
 
+    match(m: Matching<T>): Maybe<T> {
+        if (m.None) {
+            m.None();
+        }
+        return this;
+    }
+    
+    def(fn: () => T): Maybe<T> {
+        return Maybe(fn());
+    }
+
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
         return new None<T[O]>();
     }
     
     filter(fn: FilterFunction<T>): Maybe<T> {
-        return this;
-    }
-
-    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R> {
-        return Maybe(empty());
-    }
-    
-    on(fn: (value: T) => void): Maybe<T> {
         return this;
     }
 }
@@ -123,6 +130,18 @@ export class Just<T> implements Maybe<T> {
         return new Just<R>(newValue);
     }
 
+    match(m: Matching<T>): Maybe<T> {
+        if (m.Just) {
+            m.Just(this.$value);
+        }
+
+        return this;
+    }
+    
+    def(fn: () => T): Maybe<T> {
+        return this;
+    }
+
     prop<O extends keyof T>(propName: O): Maybe<T[O]> {
         return new Just(this.$value[propName]);
     }
@@ -130,18 +149,9 @@ export class Just<T> implements Maybe<T> {
     filter(fn: FilterFunction<T>): Maybe<T> {
         return fn(this.$value) ? this : new None<T>();
     }
-
-    match<R>(hasValue: (value: T) => Optional<R>, empty: () => Optional<R>): Maybe<R> {
-        return Maybe(hasValue(this.$value));
-    }
-
-    on(fn: (value: T) => void): Maybe<T> {
-        fn(this.$value);
-        return this;
-    }
 }
 
-export function Maybe<T>(value?: T | null | undefined): Maybe<T> {
+export function Maybe<T>(value: Optional<T>): Maybe<T> {
     if (value === null || value === undefined) {
         return new None<T>();
     }
@@ -156,17 +166,17 @@ export function prop<T, O extends keyof T>(obj: T, propName: O): Maybe<T[O]> {
     return new None<T[O]>();
 }
 
-// curry :: ((a, b, ...) -> c) -> a -> b -> ... -> c
-const curry = (fn: Function) => {
-    const arity = fn.length;
+export function compose<X, Y, Z>(fn1: (x: X) => Y, fn2: (y: Y) => Z): ((x: X) => Z) {
+    return (x: X) => fn2(fn1(x));
+}
 
-    return function $curry(...args: any[]) {
-        if (args.length < arity) {
-            return $curry.bind(null, ...args);
-        }
-
-        return fn.call(null, ...args);
-    };
-};
-
-export const map = curry(<T, OUT>(f: MapFunction<T, OUT>, xs: Maybe<T>) => xs.map(f));
+/**
+ * Used to un-nest nested Maybe's.
+ * @example 
+ * let m: Maybe<Maybe<number>>;
+ * let innerMaybe: Maybe<number> = m.map(collapse);
+ * @param m maybe
+ */
+export function collapse<T>(m: Maybe<T>): Optional<T> {
+    return m.value();
+}

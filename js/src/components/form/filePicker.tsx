@@ -3,6 +3,7 @@ import { TextFromBlobAsync } from '../../utils/generalUtils';
 
 export interface FilePickerProps {
     onChange: (filename: string, text: string) => void;
+    id?: string;
 }
 
 export class FilePicker extends React.PureComponent<FilePickerProps> {
@@ -18,7 +19,7 @@ export class FilePicker extends React.PureComponent<FilePickerProps> {
     render() {
         return (
             <div style={{ marginTop: '5px' }}>
-                <input type="file" onChange={this.onChange} />
+                <input id={this.props.id ? this.props.id : 'file-picker'} type="file" onChange={this.onChange} />
             </div>
         );
     }

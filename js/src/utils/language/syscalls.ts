@@ -1,9 +1,13 @@
 import { NMap, Maybe } from "../utilTypes";
 import * as _ from 'lodash';
 import { setMemoryLocation, GetMemoryBuffer } from "../rustUtils";
+import { contains } from "../generalUtils";
 
-enum BufferType {
-    FROM_WASM,
+export enum BufferType {
+    FROM_WASM_TERMINAL,
+    FROM_WASM_DRAWING,
+    FROM_WASM_FILE,
+    FROM_WASM_PALETTE,
     TO_WASM,
     NONE,
 }
@@ -23,46 +27,72 @@ interface Buffer {
 
 const buffers: NMap<Buffer> = {};
 
+export function GetBufferOfType(type: BufferType) {
+    return Maybe(_.values(buffers).filter(b => b.type === type)[0]);
+}
+
+function IsFromWasm(b: BufferType) {
+    return contains([
+        BufferType.FROM_WASM_DRAWING,
+        BufferType.FROM_WASM_FILE,
+        BufferType.FROM_WASM_PALETTE,
+        BufferType.FROM_WASM_TERMINAL,
+    ], b);
+}
+
 function InitBuffer(id: number) {
     return Maybe(buffers[id])
-        .match(() => Result.ERROR, () => {
-            buffers[id] = {
-                length: 0,
-                head: 0,
-                id,
-                type: BufferType.NONE,
-                contents: [],
-            };
-            return Result.OK;
+        .match({
+            Just() {
+                return Result.ERROR;
+            },
+            None() {
+                buffers[id] = {
+                    length: 0,
+                    head: 0,
+                    id,
+                    type: BufferType.NONE,
+                    contents: [],
+                };
+                return Result.OK;
+            }
         }).unwrap();
 }
 
 function SetBufferStart(id: number, head: number) {
     Maybe(buffers[id])
         .filter(buffer => buffer.type === BufferType.NONE)
-        .on(buffer => buffer.head = head)
-        .match(() => Result.OK, () => Result.ERROR);
+        .match({
+            Just: buffer => {
+                buffer.head = head;
+                return Result.OK;
+            },
+            None: () => Result.ERROR,
+        });
 }
 
 function SetBufferLength(id: number, length: number) {
     Maybe(buffers[id])
         .filter(buffer => buffer.type === BufferType.NONE)
-        .on(buffer => buffer.length = length)
-        .match(() => Result.OK, () => Result.ERROR);
+        .match({
+            Just: buffer => {
+                buffer.length = length;
+                return Result.OK;
+            },
+            None: () => Result.ERROR,
+        });
 }
 
-function SetBufferAsInput(id: number) {
+function SetBufferType(id: number, type: BufferType) {
     Maybe(buffers[id])
         .filter(buffer => buffer.type === BufferType.NONE)
-        .on(buffer => buffer.type = BufferType.TO_WASM)
-        .match(() => Result.OK, () => Result.ERROR);
-}
-
-function SetBufferAsOutput(id: number) {
-    Maybe(buffers[id])
-        .filter(buffer => buffer.type === BufferType.NONE)
-        .on(buffer => buffer.type = BufferType.FROM_WASM)
-        .match(() => Result.OK, () => Result.ERROR);
+        .match({
+            Just: buffer => {
+                buffer.type = type;
+                return Result.OK;
+            },
+            None: () => Result.ERROR,
+        });
 }
 
 export function GetSyscallWithNumber(n: number) {
@@ -73,12 +103,8 @@ export function GetSyscallWithNumber(n: number) {
             return SetBufferStart;
         case 3:
             return SetBufferLength;
-        case 4:
-            return SetBufferAsInput;
-        case 5:
-            return SetBufferAsOutput;
         case 6:
-            return InitBuffer;
+            return SetBufferType;
         case 7:
             return InitBuffer;
         case 8:
@@ -117,8 +143,10 @@ export function WriteAllBuffersToWasm() {
 export function WriteToBuffer(id: number, text: number[]): void {
     Maybe(buffers[id])
         .filter(b => b.type === BufferType.TO_WASM)
-        .on(b => {
-            b.contents = text.slice(0, b.length);
+        .match({
+            Just: b => {
+                b.contents = text.slice(0, b.length);
+            },
         });
 }
 
@@ -128,7 +156,7 @@ export function WriteToBuffer(id: number, text: number[]): void {
  */
 export function ReadFromBuffer(id: number): Maybe<number[]> {
     return Maybe(buffers[id])
-        .filter(b => b.type === BufferType.FROM_WASM)
+        .filter(b => IsFromWasm(b.type))
         .map(b => b.contents);
 }
 
@@ -138,8 +166,7 @@ export function ReadFromBuffer(id: number): Maybe<number[]> {
     WriteToBuffer,
     ReadFromBuffer,
     InitBuffer,
-    SetBufferAsInput,
-    SetBufferAsOutput,
+    SetBufferType,
     SetBufferLength,
     SetBufferStart,
     GetSyscallWithNumber,

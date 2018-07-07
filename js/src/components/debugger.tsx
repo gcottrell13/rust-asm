@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { Continue, Initialize } from '../utils/rustUtils';
 import { Button, FormGroup, ControlLabel, Row, Col, FormControl } from 'react-bootstrap';
 import { ProgramInput } from './programInput';
 import './debugger.scss';
 import { ProgramController } from './programController';
 import { AddListener, RemoveListener } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
+import { EventListener } from './utils/EventListener';
 
 
 interface IState {
@@ -16,25 +16,6 @@ export class DebuggerApplication extends React.Component<{}, IState> {
     state: IState = {
         loaded: false,
     };
-
-    componentWillMount() {
-        AddListener(Events.LOAD, this.onProgramLoad);
-        AddListener(Events.CONTINUE, this.Continue);
-        AddListener(Events.PAUSE, this.Pause);
-    }
-
-    componentWillUnmount() {
-        RemoveListener(Events.LOAD, this.onProgramLoad);
-        RemoveListener(Events.CONTINUE, this.Continue);
-        RemoveListener(Events.PAUSE, this.Pause);
-    }
-
-    Continue = () => {
-        this.setState({});
-    };
-    Pause = () => {
-        this.setState({});
-    }
 
     onProgramLoad = () => {
         this.setState({
@@ -67,6 +48,13 @@ export class DebuggerApplication extends React.Component<{}, IState> {
                         </pre>
                     </Col>
                 </Row>
+                <EventListener<Events, () => void>
+                    attach={AddListener}
+                    detach={RemoveListener}
+                    listeners={{
+                        [Events.LOAD]: this.onProgramLoad,
+                    }}
+                />
             </div>
         )
     }

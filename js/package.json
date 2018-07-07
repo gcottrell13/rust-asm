@@ -3,27 +3,27 @@
     "serve": "webpack-dev-server"
   },
   "devDependencies": {
-    "awesome-typescript-loader": "^5.0.0",
+    "awesome-typescript-loader": "^5.2.0",
     "css-loader": "^0.28.11",
-    "node-sass": "^4.9.0",
-    "sass-loader": "^7.0.1",
+    "node-sass": "^4.9.1",
+    "sass-loader": "^7.0.3",
     "source-map-loader": "^0.2.3",
     "style-loader": "^0.21.0",
-    "typescript": "^2.8.3",
-    "webpack": "^4.8.2",
-    "webpack-cli": "^2.1.2",
-    "webpack-dev-server": "^3.1.0"
+    "typescript": "^2.9.2",
+    "webpack": "^4.15.1",
+    "webpack-cli": "^2.1.5",
+    "webpack-dev-server": "^3.1.4"
   },
   "dependencies": {
-    "@types/lodash": "^4.14.109",
-    "@types/react": "^16.3.13",
-    "@types/react-bootstrap": "^0.32.9",
-    "@types/react-dom": "^16.0.5",
+    "@types/lodash": "^4.14.110",
+    "@types/react": "^16.4.6",
+    "@types/react-bootstrap": "^0.32.10",
+    "@types/react-dom": "^16.0.6",
     "@types/webassembly-js-api": "0.0.1",
+    "keycode": "^2.2.0",
     "lodash": "^4.17.10",
-    "react": "^16.3.2",
+    "react": "^16.4.1",
     "react-bootstrap": "^0.32.1",
-    "react-dom": "^16.3.2",
-    "react-keydown": "^1.9.7"
+    "react-dom": "^16.4.1"
   }
 }

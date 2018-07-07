@@ -15,10 +15,8 @@ export interface WasmExports {
     memory: WebAssembly.Memory;
 }
 
-const data: {
-    instance: Maybe<WebAssembly.Instance>;
-} = {
-    instance: Maybe<WebAssembly.Instance>(),
+const data = {
+    instance: Maybe<WebAssembly.Instance>(null),
 };
 
 /**

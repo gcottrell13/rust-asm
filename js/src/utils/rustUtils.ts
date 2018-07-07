@@ -3,13 +3,14 @@ import { NMap, Maybe, Just, None } from "./utilTypes";
 import { ProcessorStatus } from "./enums/ProcessorStatus";
 import { Trigger } from "./debuggerEvents";
 import { Events } from "./enums/Events";
+import { dsl2machine } from "./language/compilers";
 
 let MEM_SIZE = 2048;
 
 export function GetMemoryBuffer(location: number, length: number): Maybe<Int32Array> {
     let memoryLocation = GetWasmExports().r_GetWasmMemoryLocation(location);
     if (memoryLocation === 0) {
-        return Maybe<Int32Array>();
+        return Maybe<Int32Array>(null);
     }
     let left = MEM_SIZE - location % MEM_SIZE;
     return Maybe(new Int32Array(GetWasmExports().memory.buffer, memoryLocation, Math.min(left, length)));
@@ -58,10 +59,8 @@ export function syscall(code: number, arg: number) {
 export function Initialize(text: string) {
     let exports = GetWasmExports();
     exports.r_Initialize();
-    // TODO: parse the text first THEN send into program memory
-    let asBytes = (new TextEncoder()).encode(text).slice(0, MEM_SIZE);
 
-    GetBlock(0).on(b => b.set(asBytes));
+    GetBlock(0).map(b => b.set(dsl2machine(text).slice(0, MEM_SIZE), 1));
     
     Trigger(Events.LOAD);
 }

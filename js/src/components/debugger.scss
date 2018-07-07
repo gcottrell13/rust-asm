@@ -71,7 +71,7 @@ textarea {
                     & .line-number {
                         min-width: 40px;
                         display: inline-block;
-                        border-right: black 1px dashed;
+                        border-right: black 1px solid;
                         background-color: #b3b3b3;
                     }
                 }
@@ -96,4 +96,10 @@ textarea {
             }
         }
     }
+}
+
+.drawing-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
 }

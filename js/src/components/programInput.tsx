@@ -4,6 +4,7 @@ import { FilePicker } from './form/filePicker';
 import { Initialize, Continue } from '../utils/rustUtils';
 import { Trigger } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
+import { EasyKeys, Call } from './utils/EasyKeys';
 
 export interface ProgramInputProps {
 }
@@ -45,6 +46,7 @@ export class ProgramInput extends React.Component<ProgramInputProps, IState> {
                         <Button
                             onClick={this.Load}
                             className={'load-button'}
+                            id={'load-button'}
                         >
                             Loads Program
                         </Button>
@@ -52,16 +54,29 @@ export class ProgramInput extends React.Component<ProgramInputProps, IState> {
                 }
                 <FilePicker 
                     onChange={this.onUploadText}
+                    id={'file-load'}
                 />
                 <div className={'text-input-container'}>
                     <FormControl 
                         className={'text-input'}
                         componentClass="textarea" 
                         placeholder="" 
-                        onChange={this.handleTextInput} 
+                        onChange={this.handleTextInput}
                         value={this.state.programText}
                     />
                 </div>
+                <EasyKeys
+                    keys={{
+                        f: {
+                            event: Call,
+                            buttonSelector: '#file-load',
+                        },
+                        l: {
+                            event: Call,
+                            buttonSelector: '#load-button',
+                        }
+                    }}
+                />
             </div>
         );
     }

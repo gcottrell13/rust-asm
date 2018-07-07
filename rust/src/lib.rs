@@ -112,9 +112,7 @@ fn run() {
         ProcessorStatus::Empty => {},
         _ => { // paused, not started, running
             program.Processor.status = ProcessorStatus::Running;
-            let mut count = 0;
-            while count < 1000 && !step(program) {
-                count += 1;
+            while !step(program) {
             }
         },
     }
@@ -165,16 +163,6 @@ fn RemoveBreakpoint(point: u32) {
         prog.Breakpoints.remove(&point);
     }
 }
-
-// fn GetMemoryByBlock(blockNum: u32) -> Vec<f32> {
-//     let mem = MAIN_PROGRAM.lock().unwrap()
-//             .Processor.regions[blockNum as usize].memory;
-//     let mut y: Vec<f32> = Vec::new();
-//     for item in mem.iter() {
-//         y.push(*item as f32);
-//     }
-//     return y;
-// }
 
 fn Continue() {
     run();
@@ -272,22 +260,19 @@ impl Processor {
 
         // syscalls:
         // 1 - init new buffer with ID from bus (so JS can reference buffer with given ID)
-        //      [follow with syscall 2, syscall 3, and syscall 4 or 5]
-        //      IDs are NOT shared between inputs and outputs
+        //      [follow with syscall 2, syscall 3, and 6]
+        //      IDs are shared between inputs and outputs
         // 2 - initialize newest buffer start (param address)
         // 3 - initialize newest buffer length (param length)
-        // 4 - set buffer with ID from bus as input (JS puts key presses in all input buffers)
-        // 5 - set buffer with ID from bus as output (JS will take output and apply to whatever it likes)
-        // 6 - set newest output buffer type:
+        // 6 - initialize newest buffer type:
         //      1 - terminal output
         //      2 - drawing output
         //      3 - file output
         //      4 - set color palette (up to 256 * 3 [768] length)
-        //      5 - changed memory locations
+        //      5 - input (JS puts key presses in all input buffers)
         // 7 - clear buffer with ID from bus (JS drops buffer)
-        // 8 - reset buffer with ID from bus (moves JS buffer head back to start)
         // 9 - ready file with filename pointer (param address) 
-        //      [follow with syscall 9]
+        //      [follow with syscall 10]
         // 10 - load file contents into buffer with ID from bus (must be an input buffer)
         // 11 - sleep (param ms time)
         // 12 - flush buffer with ID from bus to JS (JS will not automatically refresh buffers)

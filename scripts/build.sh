@@ -27,8 +27,10 @@ webpack
 
 cd ..
 
-cp -a js/index.html dist/
 cp -a js/dist/. dist/
+
+cd dist
+ln -s ../js/node_modules node_modules
 
 # Minify wasm output
 # Note: if wasm-gc becomes too slow for development, create a separate script for a production build

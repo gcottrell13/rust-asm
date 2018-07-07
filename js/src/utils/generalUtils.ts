@@ -9,6 +9,36 @@ export function TextFromBlobAsync(blob: Blob): Promise<string> {
     });
 }
 
-export function StringToASCII(text: string): number[] {
-    return text.split('').map(c => c.charCodeAt(0));
+export function StringToASCII(text: string): Uint8Array {
+    return (new TextEncoder()).encode(text);
+}
+
+export function contains<T>(arr: ArrayLike<T>, value: T): boolean {
+    for(let i = 0; i < arr.length; i++) {
+        if (arr[i] === value) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function toInt(n: string) {
+    return parseInt(n);
+}
+
+export function group<T>(n: number, arr: ArrayLike<T>): T[][] {
+    let groups: T[][] = [];
+    let lastGroup: T[] = [];
+    for(let i = 0; i < arr.length; i++) {
+        if (lastGroup.length === 0) {
+            groups.push(lastGroup);
+        }
+
+        lastGroup.push(arr[i]);
+
+        if (lastGroup.length >= n) {
+            lastGroup = [];
+        }
+    }
+    return groups;
 }
