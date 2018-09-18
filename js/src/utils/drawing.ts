@@ -1,9 +1,9 @@
 import { Line, LineSegment, Point2d, Scalar } from './math';
+import { InitializeWindowBarrel } from './windowBarrel';
 
-let canvas: HTMLCanvasElement;
+let onFrame: (timestamps: number) => void;
+
 let ctx: CanvasRenderingContext2D;
-let onFrame: (timestamp?: number) => void;
-
 let layers: CanvasRenderingContext2D[] = [];
 
 let width: number;
@@ -25,13 +25,18 @@ let animatingId: number | null = null;
  */
 
 export function GetCanvas(id: string): [HTMLCanvasElement, CanvasRenderingContext2D] {
-    canvas = document.getElementById(id) as HTMLCanvasElement;
-    ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    let canvas = document.getElementById(id) as HTMLCanvasElement;
+    let _ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    ctx = _ctx;
     return [canvas, ctx];
 }
 
 export function SetCanvasAsLayer(ctx: CanvasRenderingContext2D, layer: number) {
     layers[layer] = ctx;
+}
+
+export function SetCurrentLayer(n: number) {
+    ctx = layers[n] || ctx;
 }
 
 export function SetOnFrame(o: (timestamp: number) => void) {
@@ -102,14 +107,14 @@ export function SetRGBArray(c: [number, number, number]) {
 
 export function SetColorRGBA(r: number, g: number, b: number, a?: number) {
 	if (a !== undefined) {
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+        ctx.strokeStyle = ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
 	}
     else {
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.strokeStyle = ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     }
 }
 export function SetColorStr(str: string) {
-    ctx.fillStyle = str;
+    ctx.strokeStyle = ctx.fillStyle = str;
 }
 
 /*
@@ -138,15 +143,34 @@ export function DrawSegment(line: LineSegment) {
 	}
 }
 
-export function DrawCircle(center: Point2d, radius: Scalar) {
-	ctx.moveTo(center.x + radius + dx, center.y + dy);
-    ctx.arc(center.x + dx, center.y + dy, radius, 0, Math.PI * 2, true);
+export function DrawCircle(x: Scalar, y: Scalar, radius: Scalar) {
+	ctx.moveTo(x + radius + dx, y + dy);
+    ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2, true);
 }
 
-export function DrawRectSolid(start: Point2d, width: Scalar, height: Scalar) {
-    ctx.fillRect(start.x + dx, start.y + dy, width, height);
+export function DrawRectSolid(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
+    ctx.fillRect(x + dx, y + dy, width, height);
 }
 
-export function DrawRectEmpty(start: Point2d, width: Scalar, height: Scalar) {
-    ctx.rect(start.x + dx, start.y + dy, width, height);
+export function DrawRectEmptyOuterWidth(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
+    ctx.rect(x + dx + 0.5, y + dy + 0.5, width - 1, height - 1);
 }
+
+export function DrawRectEmptyInnerWidth(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
+    ctx.rect(x + dx + 0.5, y + dy + 0.5, width + 1, height + 1);
+}
+
+InitializeWindowBarrel('drawing', {
+    DrawCircle,
+    DrawRectEmptyOuterWidth,
+    DrawRectEmptyInnerWidth,
+    DrawRectSolid,
+    DrawSegment,
+    Begin,
+    Flush,
+    SetCanvasAsLayer,
+    SetColorRGBA,
+    SetColorStr,
+    SetCurrentLayer,
+    SetRGBArray,
+});

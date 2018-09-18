@@ -3,8 +3,9 @@ import { TextViewer } from './textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
 import { CheckStatus, StepOverProgram } from '../utils/controlUtils';
 import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
-import { EasyKeys, Call } from './utils/EasyKeys';
-import { ControlKeys } from '../utils/keyCodes';
+import { AddListener, RemoveListener } from '../utils/debuggerEvents';
+import { Events } from '../utils/enums/Events';
+import { EventListener } from './utils/EventListener';
 
 export interface ProgramControllerProps {
 
@@ -24,11 +25,10 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
     };
 
     onContinue = () => {
-        
     };
 
     onStop = () => {
-
+        this.setState({});
     };
 
     onStepOver = () => {
@@ -75,16 +75,11 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
                     }
                 </div>
                 <TextViewer blocksToDisplay={[0]}/>
-                <EasyKeys
-                    keys={{
-                        s: {
-                            event: Call,
-                            buttonSelector: '#step-over-button',
-                        },
-                        [ControlKeys.DOWN]: {
-                            event: Call,
-                            buttonSelector: '#step-over-button',
-                        }
+                <EventListener
+                    attach={AddListener}
+                    detach={RemoveListener}
+                    listeners={{
+                        [Events.HALT]: this.onStop,
                     }}
                 />
             </div>

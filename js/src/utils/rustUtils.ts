@@ -1,9 +1,11 @@
 import { GetWasmExports } from "./webAssembly";
-import { NMap, Maybe, Just, None } from "./utilTypes";
-import { ProcessorStatus } from "./enums/ProcessorStatus";
+import { Maybe } from "./utilTypes";
 import { Trigger } from "./debuggerEvents";
 import { Events } from "./enums/Events";
 import { dsl2machine } from "./language/compilers";
+import { WriteAllBuffersToWasm } from "./language/syscalls";
+import { RefreshScreen } from "./screenDriver";
+import { InitializeWindowBarrel } from "./windowBarrel";
 
 let MEM_SIZE = 2048;
 
@@ -60,10 +62,34 @@ export function Initialize(text: string) {
     let exports = GetWasmExports();
     exports.r_Initialize();
 
-    GetBlock(0).map(b => b.set(dsl2machine(text).slice(0, MEM_SIZE), 1));
-    
+    GetBlock(0)
+        .map(b => b.set(dsl2machine(text).slice(0, MEM_SIZE), 1));
+        
     Trigger(Events.LOAD);
 }
+
+export function MainLoop() {
+    Continue();
+    WriteAllBuffersToWasm();
+    RefreshScreen();
+    // terminal
+}
+
+/**
+ * steps to run WASM:
+ * 
+ * - load text into wasm and initialize
+ *      EMPTY -> NOT STARTED
+ * - Continue()
+ *      RUNNING
+ * - wasm will pause
+ * - refresh all buffer contents
+ *      input buffers will recieve contents
+ *      
+ * - draw screen buffer (if it exists)
+ * - output to terminal
+ * - loop continue
+ */
 
 /**
  * Will prompt the rust processor to continue execution, if paused, not started, or already running.
@@ -121,10 +147,10 @@ export function GetWasmMemoryLocation(location: number): number {
     return GetWasmExports().r_GetWasmMemoryLocation(location);
 }
 
-(window as any).RustUtils = {
+InitializeWindowBarrel('rustUtils', {
     GetWasmMemoryLocation,
     setMemoryLocation,
     GetBlock,
     GetMemoryBuffer,
     MemSize: () => MEM_SIZE,
-};
+});

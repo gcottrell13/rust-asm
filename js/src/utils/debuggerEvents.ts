@@ -1,18 +1,21 @@
-import { NMap } from "./utilTypes";
+import { SMap } from "./utilTypes";
 import { Events } from "./enums/Events";
 
 export interface Listener {
     (data?: any): void;
 }
 
-const listeners: NMap<Listener[]> = {};
+const listeners: SMap<Listener[]> = {};
 
 export function AddListener(e: Events, fn: Listener) {
     if (!listeners[e]) {
         listeners[e] = [];
     }
-
-    listeners[e].push(fn);
+    
+    let index = listeners[e].indexOf(fn);
+    if (index === -1) {
+        listeners[e].push(fn);
+    }
 }
 
 export function Trigger(e: Events, data?: any) {
@@ -25,7 +28,6 @@ export function Trigger(e: Events, data?: any) {
 
 export function RemoveListener(e: Events, fn: Listener) {
     if (listeners[e]) {
-        let index = listeners[e].indexOf(fn);
-        listeners[e] = listeners[e].splice(index, 1);
+        listeners[e] = listeners[e].filter(x => x != fn);
     }
 }

@@ -2,6 +2,7 @@ import { ReadFromBuffer, GetBufferOfType, BufferType } from "./language/syscalls
 import { compose, Maybe, collapse } from "./utilTypes";
 import * as d from './drawing';
 import { group } from "./generalUtils";
+import { InitializeWindowBarrel } from "./windowBarrel";
 
 export type PaletteColor = [number, number, number];
 
@@ -13,10 +14,11 @@ let colorPalette: PaletteColor[] = [];
 let width: number = 4;
 let height: number = 4;
 
-let pixelWidth: number = 0;
-let pixelHeight: number = 0;
+const pixelWidth: number = 5;
+const pixelHeight: number = 5;
 
 let DEBUG: boolean = false;
+const debugColor: PaletteColor = [0, 255, 0];
 
 export function SetDebugMode(tf: boolean) {
     DEBUG = tf;
@@ -29,6 +31,10 @@ export function RefreshScreen() {
     d.Begin();
     let newBuffer: number[] = [];
 
+    d.SetCurrentLayer(1);
+
+    const changed: number[] = [];
+
     GetBufferOfType(BufferType.FROM_WASM_DRAWING)
         .prop('id')
         .map(ReadFromBuffer)
@@ -37,15 +43,26 @@ export function RefreshScreen() {
             newBuffer.push(value);
             if (value != screenBuffer[index]) {
                 DrawPixel(index, value);
+                changed.push(index);
             }
         }));
+        
+    d.Flush();
     
     if (DEBUG) {
         // if debug, draw outlines around each changed pixel
         // onto the debug layer
-    }
+        d.SetCurrentLayer(2);
+        d.SetRGBArray(debugColor);
+
+        changed.forEach(index => {
+            let x = index % width;
+            let y = Math.floor(index / width);
+            d.DrawRectEmptyOuterWidth(x, y, pixelWidth, pixelHeight);
+        });
     
-    d.Flush();
+        d.Flush();
+    }
 
     screenBuffer = newBuffer;
 }
@@ -56,14 +73,16 @@ function DrawPixel(index: number, paletteId: number) {
 
     if (y < height) {
         Maybe(colorPalette[paletteId])
-            .def(() => EMPTY_COLOR)
+            .default(() => EMPTY_COLOR)
             .map(d.SetRGBArray);
 
         // do drawing
-        d.DrawRectSolid({
-            x: x * pixelWidth,
-            y: y * pixelHeight,
-        }, pixelWidth, pixelHeight);
+        d.DrawRectSolid(
+            x * pixelWidth,
+            y * pixelHeight, 
+            pixelWidth, 
+            pixelHeight
+        );
     }
 }
 
@@ -83,6 +102,7 @@ export function ReadColorPalette() {
         });
 }
 
-(window as any).ScreenDriver = {
+InitializeWindowBarrel('screenDriver', {
+    DrawPixel,
     SetDebugMode,
-};
+});

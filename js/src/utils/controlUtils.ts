@@ -1,7 +1,6 @@
 import { ProcessorStatus } from "./enums/ProcessorStatus";
-import { NMap } from "./utilTypes";
 import { GetWasmExports } from "./webAssembly";
-import { AddListener, Trigger } from "./debuggerEvents";
+import { AddListener, Trigger, RemoveListener } from "./debuggerEvents";
 import { Events } from "./enums/Events";
 import { Continue, StepOver } from "./rustUtils";
 import { WriteAllBuffersToWasm } from "./language/syscalls";
@@ -17,7 +16,7 @@ export function CheckStatus(targets: ProcessorStatus[]) {
  */
 export function StartProgram() {
     if (!CheckStatus([ProcessorStatus.NotStarted])) return;
-
+    Trigger(Events.START);
     Continue();
 }
 
@@ -32,7 +31,20 @@ export function StepOverProgram() {
     WriteAllBuffersToWasm();
     StepOver();
     UpdateStatusCacheWithAuthoritative();
-    Trigger(Events.PAUSE);
+    switch (status) {
+        case ProcessorStatus.Halted:
+            Trigger(Events.HALT);
+            break;
+        case ProcessorStatus.Paused:
+            Trigger(Events.PAUSE);
+            break;
+        case ProcessorStatus.Running:
+            Trigger(Events.CONTINUE);
+            break;
+        case ProcessorStatus.Unknown:
+            Trigger(Events.UNKNOWN);
+            break;
+    }
 }
 
 // Meant for private use only
@@ -54,6 +66,7 @@ function UpdateStatusCacheWithAuthoritative() {
                 return ProcessorStatus.Unknown;
         }
     })();
+    RemoveListener(Events.LOAD, UpdateStatusCacheWithAuthoritative);
 }
 
 

@@ -258,25 +258,6 @@ impl Processor {
         // 19   bus => set memory location (param location)
         // 20   load immediate to bus (param value)
 
-        // syscalls:
-        // 1 - init new buffer with ID from bus (so JS can reference buffer with given ID)
-        //      [follow with syscall 2, syscall 3, and 6]
-        //      IDs are shared between inputs and outputs
-        // 2 - initialize newest buffer start (param address)
-        // 3 - initialize newest buffer length (param length)
-        // 6 - initialize newest buffer type:
-        //      1 - terminal output
-        //      2 - drawing output
-        //      3 - file output
-        //      4 - set color palette (up to 256 * 3 [768] length)
-        //      5 - input (JS puts key presses in all input buffers)
-        // 7 - clear buffer with ID from bus (JS drops buffer)
-        // 9 - ready file with filename pointer (param address) 
-        //      [follow with syscall 10]
-        // 10 - load file contents into buffer with ID from bus (must be an input buffer)
-        // 11 - sleep (param ms time)
-        // 12 - flush buffer with ID from bus to JS (JS will not automatically refresh buffers)
-
         let advance = match op {
             0 => {
                 1

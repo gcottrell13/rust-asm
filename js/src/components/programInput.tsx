@@ -2,9 +2,6 @@ import * as React from 'react';
 import { Well, FormControl, Button } from 'react-bootstrap';
 import { FilePicker } from './form/filePicker';
 import { Initialize, Continue } from '../utils/rustUtils';
-import { Trigger } from '../utils/debuggerEvents';
-import { Events } from '../utils/enums/Events';
-import { EasyKeys, Call } from './utils/EasyKeys';
 
 export interface ProgramInputProps {
 }
@@ -65,18 +62,6 @@ export class ProgramInput extends React.Component<ProgramInputProps, IState> {
                         value={this.state.programText}
                     />
                 </div>
-                <EasyKeys
-                    keys={{
-                        f: {
-                            event: Call,
-                            buttonSelector: '#file-load',
-                        },
-                        l: {
-                            event: Call,
-                            buttonSelector: '#load-button',
-                        }
-                    }}
-                />
             </div>
         );
     }

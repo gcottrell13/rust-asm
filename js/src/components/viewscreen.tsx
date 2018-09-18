@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as d from '../utils/drawing';
 
 export interface ViewscreenProps {
     width: number;
@@ -6,7 +7,21 @@ export interface ViewscreenProps {
     layerCount: number;
 }
 
-export class Viewscreen extends React.Component<ViewscreenProps> {
+export class Viewscreen extends React.PureComponent<ViewscreenProps> {
+    processProps(props: ViewscreenProps) {
+        for(let i = 0; i < props.layerCount; i ++) {
+            let get = d.GetCanvas(`canvas-${i}`);
+            d.SetCanvasAsLayer(get[1], i + 1);
+        }
+    }
+
+    componentDidMount() {
+        this.processProps(this.props);
+    }
+    componentDidUpdate(nextProps: ViewscreenProps) {
+        this.processProps(nextProps);
+    }
+
     render() {
         let layers = [];
         for(let i = 0; i < this.props.layerCount; i ++) {

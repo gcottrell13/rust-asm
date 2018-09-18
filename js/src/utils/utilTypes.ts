@@ -1,9 +1,10 @@
 export interface SMap<T> {
     [p: string]: T
 }
-export interface NMap<T> {
-    [p: number]: T
-}
+
+export type Dict<K extends string | number | symbol, V> = {[p in K]: V;};
+
+export type keyable = string | number | symbol;
 
 interface MapFunction<TIn, TOut> {
     (v: TIn): TOut;
@@ -46,7 +47,7 @@ export interface Maybe<T> {
      * Provides a default value if none
      * @param fn 
      */
-    def(fn: () => T): Maybe<T>;
+    default(fn: () => T): Maybe<T>;
 
     /**
      * Gets the given property, if it exists.
@@ -55,7 +56,7 @@ export interface Maybe<T> {
     prop<O extends keyof T>(propName: O): Maybe<T[O]>;
     
     /**
-     * 
+     * Calls the appropriate function given the state of the Maybe
      * @param m 
      */
     match(m: Matching<T>): Maybe<T>;
@@ -91,7 +92,7 @@ export class None<T> implements Maybe<T> {
         return this;
     }
     
-    def(fn: () => T): Maybe<T> {
+    default(fn: () => T): Maybe<T> {
         return Maybe(fn());
     }
 
@@ -101,6 +102,10 @@ export class None<T> implements Maybe<T> {
     
     filter(fn: FilterFunction<T>): Maybe<T> {
         return this;
+    }
+
+    static of<TIn>(): Maybe<TIn> {
+        return new None<TIn>();
     }
 }
 
@@ -138,7 +143,7 @@ export class Just<T> implements Maybe<T> {
         return this;
     }
     
-    def(fn: () => T): Maybe<T> {
+    default(fn: () => T): Maybe<T> {
         return this;
     }
 
@@ -148,6 +153,10 @@ export class Just<T> implements Maybe<T> {
     
     filter(fn: FilterFunction<T>): Maybe<T> {
         return fn(this.$value) ? this : new None<T>();
+    }
+
+    static of<TIn>(obj: TIn): Maybe<TIn> {
+        return new Just(obj);
     }
 }
 
@@ -172,11 +181,15 @@ export function compose<X, Y, Z>(fn1: (x: X) => Y, fn2: (y: Y) => Z): ((x: X) =>
 
 /**
  * Used to un-nest nested Maybe's.
+ * Takes in the inner maybe.
  * @example 
  * let m: Maybe<Maybe<number>>;
  * let innerMaybe: Maybe<number> = m.map(collapse);
  * @param m maybe
  */
 export function collapse<T>(m: Maybe<T>): Optional<T> {
-    return m.value();
+    if (m.hasValue()) {
+        return m.unwrap();
+    }
+    return null;
 }

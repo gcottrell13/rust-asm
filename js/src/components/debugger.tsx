@@ -6,6 +6,7 @@ import { ProgramController } from './programController';
 import { AddListener, RemoveListener } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
 import { EventListener } from './utils/EventListener';
+import { Viewscreen } from './viewscreen';
 
 
 interface IState {
@@ -21,7 +22,6 @@ export class DebuggerApplication extends React.Component<{}, IState> {
         this.setState({
             loaded: true,
         });
-
     };
 
     render() {
@@ -38,9 +38,11 @@ export class DebuggerApplication extends React.Component<{}, IState> {
                         }
                     </Col>
                     <Col xs={5} className={'output'}>
-                        <pre>
-                            text
-                        </pre>
+                        <Viewscreen 
+                            height={400}
+                            width={400}
+                            layerCount={2}
+                        />
                     </Col>
                     <Col xs={4} className={'screen'}>
                         <pre>
