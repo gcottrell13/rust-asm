@@ -3,7 +3,7 @@ import { GetWasmExports } from "./webAssembly";
 import { AddListener, Trigger, RemoveListener } from "./debuggerEvents";
 import { Events } from "./enums/Events";
 import { Continue, StepOver } from "./rustUtils";
-import { WriteAllBuffersToWasm } from "./language/syscalls";
+import { RefreshBuffers } from "./language/syscalls";
 
 let status: ProcessorStatus = ProcessorStatus.Empty;
 
@@ -28,7 +28,7 @@ export function PauseProgram() {
 }
 
 export function StepOverProgram() {
-    WriteAllBuffersToWasm();
+    RefreshBuffers();
     StepOver();
     UpdateStatusCacheWithAuthoritative();
     switch (status) {

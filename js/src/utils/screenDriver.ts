@@ -35,7 +35,7 @@ export function RefreshScreen() {
 
     const changed: number[] = [];
 
-    GetBufferOfType(BufferType.FROM_WASM_DRAWING)
+    GetBufferOfType(BufferType.OUTPUT_SCREEN)
         .prop('id')
         .map(ReadFromBuffer)
         .map(collapse)
@@ -73,7 +73,7 @@ function DrawPixel(index: number, paletteId: number) {
 
     if (y < height) {
         Maybe(colorPalette[paletteId])
-            .default(() => EMPTY_COLOR)
+            .else(() => EMPTY_COLOR)
             .map(d.SetRGBArray);
 
         // do drawing
@@ -90,7 +90,7 @@ function DrawPixel(index: number, paletteId: number) {
  * Refreshes the color palette (does not trigger a re draw)
  */
 export function ReadColorPalette() {
-    GetBufferOfType(BufferType.FROM_WASM_PALETTE)
+    GetBufferOfType(BufferType.OUTPUT_PALETTE)
         .prop('id')
         .map(ReadFromBuffer)
         .map(collapse)
@@ -105,4 +105,6 @@ export function ReadColorPalette() {
 InitializeWindowBarrel('screenDriver', {
     DrawPixel,
     SetDebugMode,
+    ReadColorPalette,
+    RefreshScreen,
 });
