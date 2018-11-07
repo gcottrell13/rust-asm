@@ -3,26 +3,99 @@ import { Maybe } from "./utilTypes";
 import { Trigger } from "./debuggerEvents";
 import { Events } from "./enums/Events";
 import { dsl2machine } from "./language/compilers";
-import { WriteAllBuffersToWasm } from "./language/syscalls";
+import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from "./language/syscalls";
 import { RefreshScreen } from "./screenDriver";
 import { InitializeWindowBarrel } from "./windowBarrel";
 
+// Opcodes:
+// 0    NO-OP
+// 1    load memory location (param relative pointer to location) => bus
+//          points to an absolute address
+// 2    bus => set memory location (param relative pointer to location)
+//          points to an absolute address
+// 3    load relative memory (param offset) => bus
+// 4    bus => set relative memory (param offset)
+// 5    bus => alu
+// 6    add => bus and keep in alu
+// 7    negate => bus and keep in alu
+// 8    multiply => bus and keep in alu
+// 9    invert (1/x) => bus and keep in alu
+// 10   jump relative from bus
+// 11   bgz value from bus, jump relative (param offset)
+// 12   blz value from bus, jump relative (param offset)
+// 13   bez value from bus, jump relative (param offset)
+// 14   allocate new block
+// 15   syscall (code from bus)
+// 16   halt
+// 17   pause (halts but also advances 1 step)
+// 18   load memory location (param location) => bus
+// 19   bus => set memory location (param location)
+// 20   load immediate to bus (param value)
+
 let MEM_SIZE = 2048;
 
-export function GetMemoryBuffer(location: number, length: number): Maybe<Int32Array> {
-    let memoryLocation = GetWasmExports().r_GetWasmMemoryLocation(location);
-    if (memoryLocation === 0) {
-        return Maybe<Int32Array>(null);
+class CombinedBuffer {
+    private combined: Int32Array;
+
+    constructor(initial: Int32Array[]) {
+        const length = initial.reduce((sum, arr) => sum + arr.length, 0);
+        const combined = new Int32Array(length);
+
+        let offset = 0;
+        initial.forEach(element => {
+            combined.set(element, offset);
+            offset += element.length;
+        });
+
+        this.combined = combined;
     }
-    let left = MEM_SIZE - location % MEM_SIZE;
-    return Maybe(new Int32Array(GetWasmExports().memory.buffer, memoryLocation, Math.min(left, length)));
+
+    set(array: CombinedBuffer, offset?: number): void;
+    set(array: Int32Array, offset?: number): void;
+    set(array: ArrayLike<number>, offset?: number): void;
+    set(array: CombinedBuffer | Int32Array | ArrayLike<number>, offset?: number): void {
+        if (array instanceof CombinedBuffer) {
+            this.combined.set(array.getCombined(), offset);
+        }
+        else {
+            this.combined.set(array, offset);
+        }
+    }
+
+    getCombined(): Int32Array {
+        return this.combined.subarray(0);
+    }
+    
+    get length(): number {
+        return this.combined.length;
+    }
+}
+
+export function GetMemoryBuffer(location: number, length: number): CombinedBuffer {
+    const get = GetWasmExports().r_GetWasmMemoryLocation;
+    const memoryBuffer = GetWasmExports().memory.buffer;
+    const bufferParts: Int32Array[] = [];
+
+    let remainingLength = length;
+    let currentLocation = location;
+    while (remainingLength > 0) {
+        let memoryLocation = get(currentLocation);
+        if (memoryLocation === 0) {
+            break;
+        }
+        let amountFromThisBlock = Math.min(remainingLength, MEM_SIZE - currentLocation % MEM_SIZE);
+        bufferParts.push(new Int32Array(memoryBuffer, memoryLocation, amountFromThisBlock));
+        remainingLength -= amountFromThisBlock;
+        currentLocation += amountFromThisBlock;
+    }
+    return new CombinedBuffer(bufferParts);
 }
 
 /**
  * Returns a block of memory
  * @param n the block number
  */
-export function GetBlock(n: number): Maybe<Int32Array> {
+export function GetBlock(n: number): CombinedBuffer {
     return GetMemoryBuffer(n * MEM_SIZE, MEM_SIZE);
 }
 
@@ -36,8 +109,8 @@ export function GetBlock(n: number): Maybe<Int32Array> {
  * @param value the value to be stored
  */
 export function setMemoryLocation(location: number, value: number) {
-    let loc = GetMemoryBuffer(location, 1);
-    loc.map(buffer => buffer.set([value]));
+    let buffer = GetMemoryBuffer(location, 1);
+    buffer.set([value])
 }
 
 /**
@@ -45,8 +118,8 @@ export function setMemoryLocation(location: number, value: number) {
  * @param code the command to be run: see the list above
  * @param arg the argument to the command: also see above
  */
-export function syscall(code: number, arg: number) {
-    alert(`Syscall: ${code} ${arg}`);
+export function syscall(code: number, arg: number): SyscallResult {
+    return GetSyscallWithNumber(code)(arg);
 }
 
 
@@ -61,16 +134,16 @@ export function syscall(code: number, arg: number) {
 export function Initialize(text: string) {
     let exports = GetWasmExports();
     exports.r_Initialize();
+    MEM_SIZE = exports.r_GetMemoryBlockSize();
 
-    GetBlock(0)
-        .map(b => b.set(dsl2machine(text).slice(0, MEM_SIZE), 1));
+    GetBlock(0).set(dsl2machine(text).slice(0, MEM_SIZE), 1);
         
     Trigger(Events.LOAD);
 }
 
 export function MainLoop() {
     Continue();
-    WriteAllBuffersToWasm();
+    RefreshBuffers();
     RefreshScreen();
     // terminal
 }
