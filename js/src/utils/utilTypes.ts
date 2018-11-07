@@ -47,7 +47,7 @@ export interface Maybe<T> {
      * Provides a default value if none
      * @param fn 
      */
-    default(fn: () => T): Maybe<T>;
+    else(fn: () => T): Maybe<T>;
 
     /**
      * Gets the given property, if it exists.
@@ -92,7 +92,7 @@ export class None<T> implements Maybe<T> {
         return this;
     }
     
-    default(fn: () => T): Maybe<T> {
+    else(fn: () => T): Maybe<T> {
         return Maybe(fn());
     }
 
@@ -143,7 +143,7 @@ export class Just<T> implements Maybe<T> {
         return this;
     }
     
-    default(fn: () => T): Maybe<T> {
+    else(fn: () => T): Maybe<T> {
         return this;
     }
 
@@ -192,4 +192,27 @@ export function collapse<T>(m: Maybe<T>): Optional<T> {
         return m.unwrap();
     }
     return null;
+}
+
+
+export class Either<T> {
+    private $value: T | undefined;
+    private $messasge: string | undefined;
+
+    constructor(value?: T, errorMessage?: string) {
+        this.$value = value;
+        this.$messasge = errorMessage;
+    }
+
+    public HasValue(): boolean {
+        return this.$value !== undefined;
+    }
+
+    public static of<T>(value: T) {
+        return new Either<T>(value);
+    }
+
+    public static error(msg: string) {
+        return new Either<any>(undefined, msg);
+    }
 }
