@@ -10,54 +10,54 @@ import { Viewscreen } from './viewscreen';
 
 
 interface IState {
-    loaded: boolean;
+	loaded: boolean;
 }
 
 export class DebuggerApplication extends React.Component<{}, IState> {
-    state: IState = {
-        loaded: false,
-    };
+	state: IState = {
+		loaded: false,
+	};
 
-    onProgramLoad = () => {
-        this.setState({
-            loaded: true,
-        });
-    };
+	onProgramLoad = () => {
+		this.setState({
+			loaded: true,
+		});
+	};
 
-    render() {
-        return (
-            <div className={'debugger-container'}>
-                <Row>
-                    <Col xs={3} className={'program-text'}>
-                        {
-                            this.state.loaded ? (
-                                <ProgramController />
-                            ) : (
-                                <ProgramInput />
-                            )
-                        }
-                    </Col>
-                    <Col xs={5} className={'output'}>
-                        <Viewscreen 
-                            height={400}
-                            width={400}
-                            layerCount={2}
-                        />
-                    </Col>
-                    <Col xs={4} className={'screen'}>
-                        <pre>
-                            text
-                        </pre>
-                    </Col>
-                </Row>
-                <EventListener<Events, () => void>
-                    attach={AddListener}
-                    detach={RemoveListener}
-                    listeners={{
-                        [Events.LOAD]: this.onProgramLoad,
-                    }}
-                />
-            </div>
-        )
-    }
+	render() {
+		return (
+			<div className={'debugger-container'}>
+				<Row>
+					<Col xs={3} className={'program-text'}>
+						{
+							this.state.loaded ? (
+								<ProgramController />
+							) : (
+									<ProgramInput />
+								)
+						}
+					</Col>
+					<Col xs={5} className={'output'}>
+						<Viewscreen
+							height={400}
+							width={400}
+							layerCount={2}
+						/>
+					</Col>
+					<Col xs={4} className={'screen'}>
+						<pre>
+							text
+						</pre>
+					</Col>
+				</Row>
+				<EventListener<Events, () => void>
+					attach={AddListener}
+					detach={RemoveListener}
+					listeners={{
+						[Events.LOAD]: this.onProgramLoad,
+					}}
+				/>
+			</div>
+		)
+	}
 }

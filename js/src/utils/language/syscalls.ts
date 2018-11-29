@@ -1,38 +1,38 @@
-import { Maybe, SMap, Either } from "../utilTypes";
+import { Maybe, SMap, Either } from '../utilTypes';
 import * as _ from 'lodash';
-import { GetMemoryBuffer } from "../rustUtils";
-import { contains } from "../generalUtils";
-import { InitializeWindowBarrel } from "../windowBarrel";
-import { Buffer } from "buffer";
-import { bsStyles } from "react-bootstrap/lib/utils/bootstrapUtils";
+import { GetMemoryBuffer } from '../rustUtils';
+import { contains } from '../generalUtils';
+import { InitializeWindowBarrel } from '../windowBarrel';
+import { Buffer } from 'buffer';
+import { bsStyles } from 'react-bootstrap/lib/utils/bootstrapUtils';
 
 // -----------------------------------------------------------------------
 //#region Descriptions of syscalls + enum
 // -----------------------------------------------------------------------
 
 enum syscalls {
-    /**
+	/**
      * init new buffer with ID from bus (so JS can reference buffer with given ID)
      * [follow with syscall 2, syscall 3, and 6]
      * IDs are shared between inputs and outputs
      */
-    CreateBuffer = 1,
+	CreateBuffer = 1,
 
-    SetBufferHead = 2,
-    SetBufferLength = 3,
-    SetBufferType = 4,
+	SetBufferHead = 2,
+	SetBufferLength = 3,
+	SetBufferType = 4,
 
-    DeleteBuffer = 5,
+	DeleteBuffer = 5,
 
-    /**
+	/**
      * File stuff
      */
 
-    
-    /**
+
+	/**
      * Other
      */
-    Sleep = 20,
+	Sleep = 20,
 }
 
 // syscalls:
@@ -126,29 +126,29 @@ const _zeroBuffer = new Int32Array();
 export type SyscallFunction = (parameter: number) => SyscallResult;
 
 export enum BufferType {
-    INPUT_KEY = 1,
-    INPUT_TERMINAL = 2,
-    OUTPUT_PALETTE = 3,
-    OUTPUT_SCREEN = 4,
-    OUTPUT_SCREEN_SIZE = 5,
-    NONE = 100,
+	INPUT_KEY = 1,
+	INPUT_TERMINAL = 2,
+	OUTPUT_PALETTE = 3,
+	OUTPUT_SCREEN = 4,
+	OUTPUT_SCREEN_SIZE = 5,
+	NONE = 100,
 }
 
 export enum SyscallResult {
-    OK = 0,
-    ERROR = 1,
+	OK = 0,
+	ERROR = 1,
 }
 
 interface Buffer {
-    length: number;
-    head: number;
-    id: number;
-    type: BufferType;
-    contents: Int32Array;
+	length: number;
+	head: number;
+	id: number;
+	type: BufferType;
+	contents: Int32Array;
 
-    lengthInitialized: boolean;
-    headInitialized: boolean;
-    typeInitialized: boolean;
+	lengthInitialized: boolean;
+	headInitialized: boolean;
+	typeInitialized: boolean;
 }
 
 // -----------------------------------------------------------------------
@@ -157,25 +157,25 @@ interface Buffer {
 // -----------------------------------------------------------------------
 
 export function GetBufferOfType(type: BufferType) {
-    return Maybe(_.values(buffers).filter(b => b.type === type)[0]);
+	return Maybe(_.values(buffers).filter(b => b.type === type)[0]);
 }
 
 function IsFromWasm(buffer: Buffer) {
-    return contains([
-        BufferType.OUTPUT_PALETTE,
-        BufferType.OUTPUT_SCREEN,
-        BufferType.OUTPUT_SCREEN_SIZE,
-    ], buffer.type);
+	return contains([
+		BufferType.OUTPUT_PALETTE,
+		BufferType.OUTPUT_SCREEN,
+		BufferType.OUTPUT_SCREEN_SIZE,
+	], buffer.type);
 }
 function IsToWasm(buffer: Buffer) {
-    return contains([
-        BufferType.INPUT_KEY,
-        BufferType.INPUT_TERMINAL,
-    ], buffer.type);
+	return contains([
+		BufferType.INPUT_KEY,
+		BufferType.INPUT_TERMINAL,
+	], buffer.type);
 }
 
 function IsBufferInitialized(buffer: Buffer) {
-    return buffer.headInitialized && buffer.lengthInitialized && buffer.typeInitialized;
+	return buffer.headInitialized && buffer.lengthInitialized && buffer.typeInitialized;
 }
 
 // -----------------------------------------------------------------------
@@ -184,65 +184,65 @@ function IsBufferInitialized(buffer: Buffer) {
 // -----------------------------------------------------------------------
 
 function CreateBuffer(): SyscallResult {
-    bufferCreateId += 1;
-    buffers[bufferCreateId] = {
-        length: 0,
-        head: 0,
-        id: bufferCreateId,
-        type: BufferType.NONE,
-        contents: _zeroBuffer,
-        headInitialized: false,
-        lengthInitialized: false,
-        typeInitialized: false,
-    };
-    return SyscallResult.OK;
-};
+	bufferCreateId += 1;
+	buffers[bufferCreateId] = {
+		length: 0,
+		head: 0,
+		id: bufferCreateId,
+		type: BufferType.NONE,
+		contents: _zeroBuffer,
+		headInitialized: false,
+		lengthInitialized: false,
+		typeInitialized: false,
+	};
+	return SyscallResult.OK;
+}
 
 function SetBufferHead(head: number): SyscallResult {
-    return Maybe(buffers[bufferCreateId])
-        .filter(buffer => !buffer.headInitialized)
-        .match({
-            Just: buffer => {
-                buffer.head = head;
-                buffer.headInitialized = true;
-            },
-        })
-        .map(b => SyscallResult.OK)
-        .else(() => SyscallResult.ERROR)
-        .unwrap();
+	return Maybe(buffers[bufferCreateId])
+		.filter(buffer => !buffer.headInitialized)
+		.match({
+			Just(buffer) {
+				buffer.head = head;
+				buffer.headInitialized = true;
+			},
+		})
+		.map(b => SyscallResult.OK)
+		.else(() => SyscallResult.ERROR)
+		.unwrap();
 }
 
 function SetBufferLength(length: number): SyscallResult {
-    return Maybe(buffers[bufferCreateId])
-        .filter(buffer => !buffer.lengthInitialized)
-        .match({
-            Just: buffer => {
-                buffer.length = length;
-                buffer.lengthInitialized = true;
-                buffer.contents = new Int32Array(length);
-            },
-        })
-        .map(b => SyscallResult.OK)
-        .else(() => SyscallResult.ERROR)
-        .unwrap();
+	return Maybe(buffers[bufferCreateId])
+		.filter(buffer => !buffer.lengthInitialized)
+		.match({
+			Just(buffer) {
+				buffer.length = length;
+				buffer.lengthInitialized = true;
+				buffer.contents = new Int32Array(length);
+			},
+		})
+		.map(b => SyscallResult.OK)
+		.else(() => SyscallResult.ERROR)
+		.unwrap();
 }
 
 function SetBufferType(type: BufferType): SyscallResult {
-    return Maybe(buffers[bufferCreateId])
-        .filter(buffer => !buffer.typeInitialized)
-        .match({
-            Just: buffer => {
-                buffer.type = type;
-                buffer.typeInitialized = true;
-            },
-        })
-        .map(b => SyscallResult.OK)
-        .else(() => SyscallResult.ERROR)
-        .unwrap();
+	return Maybe(buffers[bufferCreateId])
+		.filter(buffer => !buffer.typeInitialized)
+		.match({
+			Just(buffer) {
+				buffer.type = type;
+				buffer.typeInitialized = true;
+			},
+		})
+		.map(b => SyscallResult.OK)
+		.else(() => SyscallResult.ERROR)
+		.unwrap();
 }
 
 function Sleep(): SyscallResult {
-    return SyscallResult.ERROR;
+	return SyscallResult.ERROR;
 }
 
 // -----------------------------------------------------------------------
@@ -251,23 +251,23 @@ function Sleep(): SyscallResult {
 // -----------------------------------------------------------------------
 
 const _allSyscalls: SMap<SyscallFunction> = {
-    CreateBuffer,
-    SetBufferHead,
-    SetBufferLength,
-    SetBufferType,
-    Sleep,
-}
+	CreateBuffer,
+	SetBufferHead,
+	SetBufferLength,
+	SetBufferType,
+	Sleep,
+};
 
 /**
  * Maps the given syscall code to the appropriate function
  * @param n 
  */
 export function GetSyscallWithNumber(n: syscalls): SyscallFunction {
-    const name = syscalls[n];
-    if (name in _allSyscalls) {
-        return _allSyscalls[name];
-    }
-    return () => SyscallResult.ERROR;
+	const name = syscalls[n];
+	if (name in _allSyscalls) {
+		return _allSyscalls[name];
+	}
+	return () => SyscallResult.ERROR;
 }
 
 // -----------------------------------------------------------------------
@@ -279,17 +279,17 @@ export function GetSyscallWithNumber(n: syscalls): SyscallFunction {
  * All input buffers will refresh their contents
  */
 function WriteAllBuffersToWasm() {
-    _.values(buffers)
-        .filter(IsToWasm)
-        .filter(IsBufferInitialized)
-        .map(_writeIntoWasm);
+	_.values(buffers)
+		.filter(IsToWasm)
+		.filter(IsBufferInitialized)
+		.map(_writeIntoWasm);
 }
 
 function ReadAllBuffersFromWasm() {
-    _.values(buffers)
-        .filter(IsFromWasm)
-        .filter(IsBufferInitialized)
-        .forEach(_readIntoLocal);
+	_.values(buffers)
+		.filter(IsFromWasm)
+		.filter(IsBufferInitialized)
+		.forEach(_readIntoLocal);
 }
 
 // -----------------------------------------------------------------------
@@ -303,10 +303,10 @@ function ReadAllBuffersFromWasm() {
  * @param text text to put into buffer
  */
 export function WriteToBuffer(bufferId: number, text: Int32Array) {
-    Maybe(buffers[bufferId])
-        .filter(IsToWasm)
-        .filter(IsBufferInitialized)
-        .map(buffer => buffer.contents.set(text.slice(0, buffer.length)));
+	Maybe(buffers[bufferId])
+		.filter(IsToWasm)
+		.filter(IsBufferInitialized)
+		.map(buffer => buffer.contents.set(text.slice(0, buffer.length)));
 }
 
 /**
@@ -314,17 +314,17 @@ export function WriteToBuffer(bufferId: number, text: Int32Array) {
  * @param id buffer id
  */
 export function ReadFromBuffer(bufferId: number): Maybe<Int32Array> {
-    return Maybe(buffers[bufferId])
-        .filter(IsFromWasm)
-        .filter(IsBufferInitialized)
-        .map(buffer => buffer.contents);
+	return Maybe(buffers[bufferId])
+		.filter(IsFromWasm)
+		.filter(IsBufferInitialized)
+		.map(buffer => buffer.contents);
 }
 
 function _readIntoLocal(buffer: Buffer) {
-    buffer.contents.set(GetMemoryBuffer(buffer.head, buffer.length).getCombined());
+	buffer.contents.set(GetMemoryBuffer(buffer.head, buffer.length).getCombined());
 }
 function _writeIntoWasm(buffer: Buffer) {
-    GetMemoryBuffer(buffer.head, buffer.length).set(buffer.contents)
+	GetMemoryBuffer(buffer.head, buffer.length).set(buffer.contents);
 }
 
 
@@ -334,8 +334,8 @@ function _writeIntoWasm(buffer: Buffer) {
 // -----------------------------------------------------------------------
 
 export function RefreshBuffers() {
-    WriteAllBuffersToWasm();
-    ReadAllBuffersFromWasm();
+	WriteAllBuffersToWasm();
+	ReadAllBuffersFromWasm();
 }
 
 // -----------------------------------------------------------------------
@@ -344,15 +344,15 @@ export function RefreshBuffers() {
 // -----------------------------------------------------------------------
 
 InitializeWindowBarrel('syscalls', {
-    WriteAllBuffersToWasm,
-    WriteToBuffer,
-    ReadFromBuffer,
-    CreateBuffer,
-    SetBufferType,
-    SetBufferLength,
-    SetBufferHead,
-    GetSyscallWithNumber,
-    GetMemoryBuffer,
+	WriteAllBuffersToWasm,
+	WriteToBuffer,
+	ReadFromBuffer,
+	CreateBuffer,
+	SetBufferType,
+	SetBufferLength,
+	SetBufferHead,
+	GetSyscallWithNumber,
+	GetMemoryBuffer,
 });
 
 // -----------------------------------------------------------------------

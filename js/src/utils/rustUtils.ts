@@ -1,11 +1,11 @@
-import { GetWasmExports } from "./webAssembly";
-import { Maybe } from "./utilTypes";
-import { Trigger } from "./debuggerEvents";
-import { Events } from "./enums/Events";
-import { dsl2machine } from "./language/compilers";
-import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from "./language/syscalls";
-import { RefreshScreen } from "./screenDriver";
-import { InitializeWindowBarrel } from "./windowBarrel";
+import { GetWasmExports } from './webAssembly';
+import { Maybe } from './utilTypes';
+import { Trigger } from './debuggerEvents';
+import { Events } from './enums/Events';
+import { dsl2machine } from './language/compilers';
+import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from './language/syscalls';
+import { RefreshScreen } from './screenDriver';
+import { InitializeWindowBarrel } from './windowBarrel';
 
 // Opcodes:
 // 0    NO-OP
@@ -35,60 +35,60 @@ import { InitializeWindowBarrel } from "./windowBarrel";
 let MEM_SIZE = 2048;
 
 class CombinedBuffer {
-    private combined: Int32Array;
+	private combined: Int32Array;
 
-    constructor(initial: Int32Array[]) {
-        const length = initial.reduce((sum, arr) => sum + arr.length, 0);
-        const combined = new Int32Array(length);
+	constructor(initial: Int32Array[]) {
+		const length = initial.reduce((sum, arr) => sum + arr.length, 0);
+		const combined = new Int32Array(length);
 
-        let offset = 0;
-        initial.forEach(element => {
-            combined.set(element, offset);
-            offset += element.length;
-        });
+		let offset = 0;
+		initial.forEach((element) => {
+			combined.set(element, offset);
+			offset += element.length;
+		});
 
-        this.combined = combined;
-    }
+		this.combined = combined;
+	}
 
-    set(array: CombinedBuffer, offset?: number): void;
-    set(array: Int32Array, offset?: number): void;
-    set(array: ArrayLike<number>, offset?: number): void;
-    set(array: CombinedBuffer | Int32Array | ArrayLike<number>, offset?: number): void {
-        if (array instanceof CombinedBuffer) {
-            this.combined.set(array.getCombined(), offset);
-        }
-        else {
-            this.combined.set(array, offset);
-        }
-    }
+	set(array: CombinedBuffer, offset?: number): void;
+	set(array: Int32Array, offset?: number): void;
+	set(array: ArrayLike<number>, offset?: number): void;
+	set(array: CombinedBuffer | Int32Array | ArrayLike<number>, offset?: number): void {
+		if (array instanceof CombinedBuffer) {
+			this.combined.set(array.getCombined(), offset);
+		}
+		else {
+			this.combined.set(array, offset);
+		}
+	}
 
-    getCombined(): Int32Array {
-        return this.combined.subarray(0);
-    }
-    
-    get length(): number {
-        return this.combined.length;
-    }
+	getCombined(): Int32Array {
+		return this.combined.subarray(0);
+	}
+	
+	get length(): number {
+		return this.combined.length;
+	}
 }
 
 export function GetMemoryBuffer(location: number, length: number): CombinedBuffer {
-    const get = GetWasmExports().r_GetWasmMemoryLocation;
-    const memoryBuffer = GetWasmExports().memory.buffer;
-    const bufferParts: Int32Array[] = [];
+	const get = GetWasmExports().r_GetWasmMemoryLocation;
+	const memoryBuffer = GetWasmExports().memory.buffer;
+	const bufferParts: Int32Array[] = [];
 
-    let remainingLength = length;
-    let currentLocation = location;
-    while (remainingLength > 0) {
-        let memoryLocation = get(currentLocation);
-        if (memoryLocation === 0) {
-            break;
-        }
-        let amountFromThisBlock = Math.min(remainingLength, MEM_SIZE - currentLocation % MEM_SIZE);
-        bufferParts.push(new Int32Array(memoryBuffer, memoryLocation, amountFromThisBlock));
-        remainingLength -= amountFromThisBlock;
-        currentLocation += amountFromThisBlock;
-    }
-    return new CombinedBuffer(bufferParts);
+	let remainingLength = length;
+	let currentLocation = location;
+	while (remainingLength > 0) {
+		let memoryLocation = get(currentLocation);
+		if (memoryLocation === 0) {
+			break;
+		}
+		let amountFromThisBlock = Math.min(remainingLength, MEM_SIZE - currentLocation % MEM_SIZE);
+		bufferParts.push(new Int32Array(memoryBuffer, memoryLocation, amountFromThisBlock));
+		remainingLength -= amountFromThisBlock;
+		currentLocation += amountFromThisBlock;
+	}
+	return new CombinedBuffer(bufferParts);
 }
 
 /**
@@ -96,7 +96,7 @@ export function GetMemoryBuffer(location: number, length: number): CombinedBuffe
  * @param n the block number
  */
 export function GetBlock(n: number): CombinedBuffer {
-    return GetMemoryBuffer(n * MEM_SIZE, MEM_SIZE);
+	return GetMemoryBuffer(n * MEM_SIZE, MEM_SIZE);
 }
 
 // ------------------------------------------------------------------------------------
@@ -109,8 +109,8 @@ export function GetBlock(n: number): CombinedBuffer {
  * @param value the value to be stored
  */
 export function setMemoryLocation(location: number, value: number) {
-    let buffer = GetMemoryBuffer(location, 1);
-    buffer.set([value])
+	let buffer = GetMemoryBuffer(location, 1);
+	buffer.set([value]);
 }
 
 /**
@@ -119,7 +119,7 @@ export function setMemoryLocation(location: number, value: number) {
  * @param arg the argument to the command: also see above
  */
 export function syscall(code: number, arg: number): SyscallResult {
-    return GetSyscallWithNumber(code)(arg);
+	return GetSyscallWithNumber(code)(arg);
 }
 
 
@@ -132,20 +132,20 @@ export function syscall(code: number, arg: number): SyscallResult {
  * @param text the program text
  */
 export function Initialize(text: string) {
-    let exports = GetWasmExports();
-    exports.r_Initialize();
-    MEM_SIZE = exports.r_GetMemoryBlockSize();
+	let exports = GetWasmExports();
+	exports.r_Initialize();
+	MEM_SIZE = exports.r_GetMemoryBlockSize();
 
-    GetBlock(0).set(dsl2machine(text).slice(0, MEM_SIZE), 1);
-        
-    Trigger(Events.LOAD);
+	GetBlock(0).set(dsl2machine(text).slice(0, MEM_SIZE), 1);
+
+	Trigger(Events.LOAD);
 }
 
 export function MainLoop() {
-    Continue();
-    RefreshBuffers();
-    RefreshScreen();
-    // terminal
+	Continue();
+	RefreshBuffers();
+	RefreshScreen();
+	// terminal
 }
 
 /**
@@ -169,22 +169,22 @@ export function MainLoop() {
  * No-op if the processor is halted or empty.
  */
 export function Continue() {
-    let exports = GetWasmExports();
-    exports.r_Continue();
+	let exports = GetWasmExports();
+	exports.r_Continue();
 }
 
 /**
  * If the rust processor is paused, a single operation will be performed.
  */
 export function StepOver() {
-    GetWasmExports().r_StepOver();
+	GetWasmExports().r_StepOver();
 }
 
 /**
  * Returns the current instruction pointer of the rust processor.
  */
 export function GetInstructionPointer(): number {
-    return GetWasmExports().r_GetInstructionPointer();
+	return GetWasmExports().r_GetInstructionPointer();
 }
 
 /**
@@ -193,7 +193,7 @@ export function GetInstructionPointer(): number {
  * @param b the line number to add a breakpoint to.
  */
 export function SetBreakpoint(b: number) {
-    GetWasmExports().r_SetBreakpoint(b);
+	GetWasmExports().r_SetBreakpoint(b);
 }
 
 /**
@@ -202,14 +202,14 @@ export function SetBreakpoint(b: number) {
  * @param b the line number to remove a breakpoint from
  */
 export function RemoveBreakpoint(b: number) {
-    GetWasmExports().r_RemoveBreakpoint(b);
+	GetWasmExports().r_RemoveBreakpoint(b);
 }
 
 /**
  * Gets the memory block size from rust
  */
 export function UpdateMemoryBlockSize() {
-    MEM_SIZE = GetWasmExports().r_GetMemoryBlockSize();
+	MEM_SIZE = GetWasmExports().r_GetMemoryBlockSize();
 }
 
 /**
@@ -217,13 +217,13 @@ export function UpdateMemoryBlockSize() {
  * @param location the location in the rust vm
  */
 export function GetWasmMemoryLocation(location: number): number {
-    return GetWasmExports().r_GetWasmMemoryLocation(location);
+	return GetWasmExports().r_GetWasmMemoryLocation(location);
 }
 
 InitializeWindowBarrel('rustUtils', {
-    GetWasmMemoryLocation,
-    setMemoryLocation,
-    GetBlock,
-    GetMemoryBuffer,
-    MemSize: () => MEM_SIZE,
+	GetWasmMemoryLocation,
+	setMemoryLocation,
+	GetBlock,
+	GetMemoryBuffer,
+	MemSize: () => MEM_SIZE,
 });

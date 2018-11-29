@@ -22,8 +22,12 @@ export function contains<T>(arr: ArrayLike<T>, value: T): boolean {
     return false;
 }
 
-export function toInt(n: string) {
-    return parseInt(n);
+export function toInt(n: string): number {
+    const i = parseInt(n);
+    if (isNaN(i)) {
+        throw new Error(`Cannot parse '${n}' to an integer`);
+    }
+    return i;
 }
 
 export function group<T>(n: number, arr: ArrayLike<T>): T[][] {

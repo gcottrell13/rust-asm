@@ -25,27 +25,27 @@ let animatingId: number | null = null;
  */
 
 export function GetCanvas(id: string): [HTMLCanvasElement, CanvasRenderingContext2D] {
-    let canvas = document.getElementById(id) as HTMLCanvasElement;
-    let _ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-    ctx = _ctx;
-    return [canvas, ctx];
+	let canvas = document.getElementById(id) as HTMLCanvasElement;
+	let _ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+	ctx = _ctx;
+	return [canvas, ctx];
 }
 
 export function SetCanvasAsLayer(ctx: CanvasRenderingContext2D, layer: number) {
-    layers[layer] = ctx;
+	layers[layer] = ctx;
 }
 
 export function SetCurrentLayer(n: number) {
-    ctx = layers[n] || ctx;
+	ctx = layers[n] || ctx;
 }
 
 export function SetOnFrame(o: (timestamp: number) => void) {
-    onFrame = o;
+	onFrame = o;
 }
 
 export function SetDimensions(w: number, h: number) {
-    width = w;
-    height = h;
+	width = w;
+	height = h;
 }
 
 /*
@@ -55,26 +55,26 @@ export function SetDimensions(w: number, h: number) {
  */
 
 export function StartAnimation() {
-    if (animatingId === null) {
-        animatingId = window.requestAnimationFrame(animate);
-    }
+	if (animatingId === null) {
+		animatingId = window.requestAnimationFrame(animate);
+	}
 }
 export function StopAnimation() {
-    if (animatingId !== null) {
-        window.cancelAnimationFrame(animatingId);
-        animatingId = null;
-    }
+	if (animatingId !== null) {
+		window.cancelAnimationFrame(animatingId);
+		animatingId = null;
+	}
 }
 export function IsAnimationRunning() {
-    return animatingId !== null;
+	return animatingId !== null;
 }
 
 function animate(timestamp: number) {
-    ctx.clearRect(0, 0, width, height);
-    Begin();
-    onFrame(timestamp);
-    Flush();
-    animatingId = window.requestAnimationFrame(animate);
+	ctx.clearRect(0, 0, width, height);
+	Begin();
+	onFrame(timestamp);
+	Flush();
+	animatingId = window.requestAnimationFrame(animate);
 }
 
 /**
@@ -87,34 +87,34 @@ function animate(timestamp: number) {
 // affine transformations
 
 export function ClearTransforms() {
-    dx = 0;
-    dy = 0;
-    sx = 1;
-    sy = 1;
-    r = 0;
+	dx = 0;
+	dy = 0;
+	sx = 1;
+	sy = 1;
+	r = 0;
 }
 
-export function Translate(x: number, y: number) { 
-    dx = x;
-    dy = y;
+export function Translate(x: number, y: number) {
+	dx = x;
+	dy = y;
 }
 
 // color transformations
 
 export function SetRGBArray(c: [number, number, number]) {
-    SetColorRGBA(c[0], c[1], c[2], 255);
+	SetColorRGBA(c[0], c[1], c[2], 255);
 }
 
 export function SetColorRGBA(r: number, g: number, b: number, a?: number) {
 	if (a !== undefined) {
-        ctx.strokeStyle = ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+		ctx.strokeStyle = ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
 	}
-    else {
-        ctx.strokeStyle = ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-    }
+	else {
+		ctx.strokeStyle = ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+	}
 }
 export function SetColorStr(str: string) {
-    ctx.strokeStyle = ctx.fillStyle = str;
+	ctx.strokeStyle = ctx.fillStyle = str;
 }
 
 /*
@@ -122,55 +122,55 @@ export function SetColorStr(str: string) {
  */
 
 export function Flush() {
-    ctx.stroke();
+	ctx.stroke();
 }
 export function Begin() {
-    ctx.beginPath();
+	ctx.beginPath();
 }
 
 export function DrawSegment(line: LineSegment) {
 	if (line.slope === null) {
-        ctx.moveTo(line.intercept + dx, line.boundA + dy);
-        ctx.lineTo(line.intercept + dx, line.boundB + dy);
+		ctx.moveTo(line.intercept + dx, line.boundA + dy);
+		ctx.lineTo(line.intercept + dx, line.boundB + dy);
 	}
 	else {
 		let ep1x = line.boundA;
 		let ep1y = line.boundA * line.slope + line.intercept;
 		let ep2x = line.boundB;
 		let ep2y = line.boundB * line.slope + line.intercept;
-        ctx.moveTo(ep1x + dx, ep1y + dy);
-        ctx.lineTo(ep2x + dx, ep2y + dy);
+		ctx.moveTo(ep1x + dx, ep1y + dy);
+		ctx.lineTo(ep2x + dx, ep2y + dy);
 	}
 }
 
 export function DrawCircle(x: Scalar, y: Scalar, radius: Scalar) {
 	ctx.moveTo(x + radius + dx, y + dy);
-    ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2, true);
+	ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2, true);
 }
 
 export function DrawRectSolid(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
-    ctx.fillRect(x + dx, y + dy, width, height);
+	ctx.fillRect(x + dx, y + dy, width, height);
 }
 
 export function DrawRectEmptyOuterWidth(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
-    ctx.rect(x + dx + 0.5, y + dy + 0.5, width - 1, height - 1);
+	ctx.rect(x + dx + 0.5, y + dy + 0.5, width - 1, height - 1);
 }
 
 export function DrawRectEmptyInnerWidth(x: Scalar, y: Scalar, width: Scalar, height: Scalar) {
-    ctx.rect(x + dx + 0.5, y + dy + 0.5, width + 1, height + 1);
+	ctx.rect(x + dx + 0.5, y + dy + 0.5, width + 1, height + 1);
 }
 
 InitializeWindowBarrel('drawing', {
-    DrawCircle,
-    DrawRectEmptyOuterWidth,
-    DrawRectEmptyInnerWidth,
-    DrawRectSolid,
-    DrawSegment,
-    Begin,
-    Flush,
-    SetCanvasAsLayer,
-    SetColorRGBA,
-    SetColorStr,
-    SetCurrentLayer,
-    SetRGBArray,
+	DrawCircle,
+	DrawRectEmptyOuterWidth,
+	DrawRectEmptyInnerWidth,
+	DrawRectSolid,
+	DrawSegment,
+	Begin,
+	Flush,
+	SetCanvasAsLayer,
+	SetColorRGBA,
+	SetColorStr,
+	SetCurrentLayer,
+	SetRGBArray,
 });
