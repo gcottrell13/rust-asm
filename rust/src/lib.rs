@@ -249,17 +249,12 @@ impl Processor {
 		self.perStepDontMove = true;
 	}
 
-	fn resetPerStep(&mut self) {
-		self.perStepParamPointer = 0;
-		self.perStepDontMove = false;
-	}
-
 	// returns whether or not a breakpoint was hit
 	fn step(&mut self) -> StopCode {
 		let n = self.next;
 		let mut stopCode = StopCode::None;
 
-		self.resetPerStep();
+        self.perStepParamPointer = 0;
 
 		let op = self._get_memory_loc(n);
 
@@ -281,17 +276,46 @@ impl Processor {
 		// Opcodes:
 		//	0	NO-OP
 
-		//	1	memory[parameter] => bus
-		//	2	bus => memory[parameter]
+		//	1	memory[parameter] -> bus
+		//	2	bus -> memory[parameter]
 
-		//	3	memory[current + parameter as int] => bus
-		//	4	bus => memory[current + parameter as int]
+		//	3	memory[current + parameter as int] -> bus
+		//	4	bus -> memory[current + parameter as int]
 
-		//	5	memory[memory[parameter]] => bus
-		//	6	bus => memory[memory[parameter]]
+		//	5	memory[memory[parameter]] -> bus
+		//	6	bus -> memory[memory[parameter]]
 
-		//	7	memory[memory[current + parameter as int]] => bus
-		//	8	bus => memory[memory[current + parameter as int]]
+		//	7	memory[memory[current + parameter as int]] -> bus
+		//	8	bus -> memory[memory[current + parameter as int]]
+
+		//	9	ALU.add
+		//		result -> ALU.hi
+
+		//	10	ALU.negate
+		//		result -> ALU.hi
+
+		//	11	ALU.multiply
+
+		//	12	ALU.divide
+
+		//	13	jump -> goto current + parameter as int
+		//	14	jump bus not 0 -> goto current + parameter as int
+		//	15	jump bus is 0 -> goto current + parameter as int
+
+		//	16	ALU.hi -> bus
+		//	17	ALU.lo -> bus
+
+		//	18	ALU to int mode
+		//	19	ALU to float mode
+
+		//	20	new block, beginning address -> bus
+		//	21	syscall with parameter as code and bus as argument
+		//	22	halt
+		//	23	pause
+
+		//	24	parameter -> bus
+
+        //  25  bus -> push onto ALU
 
 		// 1	load value from relptr to bus
 		// 2	move value from bus to location specified by relptr
@@ -431,6 +455,9 @@ impl Processor {
 			// by the operation, so we want to move perStepParamPointer + 1
 			self.next += self.perStepParamPointer + 1;
 		}
+        else {
+            self.perStepDontMove = false;
+        }
 
 		return stopCode;
 	}
