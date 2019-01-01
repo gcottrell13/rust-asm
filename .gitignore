@@ -10,3 +10,5 @@ Cargo.lock
 /rust/Cargo.toml
 
 /js/package-lock.json
+
+*.code-workspace
