@@ -258,17 +258,6 @@ impl Processor {
 
 		let op = self._get_memory_loc(n);
 
-		// absadd := absolute address
-		//	 value at address of input is literal
-		// reladd := relative address
-		//	 input is a relative location to current instruction counter
-		//	 value at relative address is literal
-		// absptr := absolute pointer
-		//	 input is absolute address of a pointer
-		// relptr := relative pointer
-		//	 input is a relative location to current instruction counter
-		//	 value at relative address is a pointer
-
 		// 'parameter' is always an unsigned integer, and is type 'storage'
 		// 'as' means 'transmute the bytes to'
 		// 'current' is the current instruction pointer
@@ -282,11 +271,11 @@ impl Processor {
 		//	3	memory[current + parameter as int] -> bus
 		//	4	bus -> memory[current + parameter as int]
 
-		//	5	memory[memory[parameter]] -> bus
-		//	6	bus -> memory[memory[parameter]]
+        //  5   memory[bus] -> bus
+        //  X 6   bus -> memory[bus]
 
-		//	7	memory[memory[current + parameter as int]] -> bus
-		//	8	bus -> memory[memory[current + parameter as int]]
+        //  7   memory[current + bus as int] -> bus
+        //  X 8   bus -> memory[current + bus as int]
 
 		//	9	ALU.add
 		//		result -> ALU.hi
@@ -299,7 +288,7 @@ impl Processor {
 		//	12	ALU.divide
 
 		//	13	jump -> goto current + parameter as int
-		//	14	jump bus not 0 -> goto current + parameter as int
+		//	14	jump bus > 0 -> goto current + parameter as int
 		//	15	jump bus is 0 -> goto current + parameter as int
 
 		//	16	ALU.hi -> bus
@@ -317,52 +306,15 @@ impl Processor {
 
         //  25  bus -> push onto ALU
 
-		// 1	load value from relptr to bus
-		// 2	move value from bus to location specified by relptr
-		// 3	load value from reladd to bus
-		// 4	move value from bus to location specified by reladd
-		// 5	bus => push value to ALU (as bits)
-		// 6	add => result is in hi (as bits)
-		// 7	negate => result is in hi (as bits)
-		// 8	multiply => puts product into hi and lo registers in ALU
-		// 9	divide (recent / old) => puts quotient into hi and lo registers in ALU
-		//		 if ALU is in int mode:
-		//			 The result will be integer division and put into hi.
-		//			 lo will be set to 0.
-		//		 if ALU is in float mode:
-		//			 The top half of the bits will be put into hi
-		//			 the bottom half will be put into lo
-		// 10   jump relative from bus
-		// 11   bgz value from bus, jump relative (param offset)
-		// 12   blz value from bus, jump relative (param offset)
-		// 13   bez value from bus, jump relative (param offset)
-		// 14   allocate new block, put address on bus
-		// 15   syscall (code from bus)
-		// 16   halt
-		// 17   pause (halts but also advances 1 step)
-		// 18   load value from absadd to bus
-		// 19   move value from bus to location specified by absadd
-		// 20   load immediate to bus (param value)
-
-		// 21   move ALU to float mode, value is preserved
-		// 22   move ALU to int mode, value preserved
-		// 21   move ALU to float mode, bits are preserved
-		// 22   move ALU to int mode, bits are preserved
-
-		// 23   get value from lo => bus
-		// 24   get value from hi => bus
-		// 25   convert value in bus from int to float
-		// 26   convert value in bus from float to int
-
 		match op {
 			0 => {},
-			1 => {
-				let param = self.getParam();
-				self.load_location_relative_pointer(param);
-			},
+            1 => {
+                let param = self.getParam();
+				self.load_location(param);
+            },
 			2 => {
 				let param = self.getParam();
-				self.set_location_relative_pointer(param);
+				self.set_location(param);
 			},
 			3 => {
 				let param = self.getParam();
@@ -373,76 +325,76 @@ impl Processor {
 				self.set_location_relative(param);
 			},
 			5 => {
-				self.push_to_alu();
-			},
-			6 => {
-				self.add();
+				self.load_location_with_bus();
 			},
 			7 => {
-				self.negate();
-			},
-			8 => {
-				self.multiply();
+				self.load_location_relative_with_bus();
 			},
 			9 => {
-				self.divide();
+				self.add();
 			},
 			10 => {
+				self.negate();
+			},
+			11 => {
+				self.multiply();
+			},
+			12 => {
+				self.divide();
+			},
+			13 => {
 				self.jump();
 				self.dontMoveParamPointer();
 			},
-			11 => {
-				let param = self.getParam();
-				self.bgz(param);
-			},
-			12 => {
-				let param = self.getParam();
-				self.blz(param);
-			},
-			13 => {
-				let param = self.getParam();
-				self.bez(param);
-			},
 			14 => {
+				let param = self.getParam();
+				match self.bgz(param) {
+					0 => self.dontMoveParamPointer(),
+					_ => {},
+				}
+			},
+			15 => {
+				let param = self.getParam();
+				match self.bez(param) {
+					0 => self.dontMoveParamPointer(),
+					_ => {},
+				}
+			},
+			16 => {
+				self.get_hi();
+			},
+			17 => {
+				self.get_lo();
+			},
+			18 => {
+				self.alu_to_int();
+			},
+			19 => {
+				self.alu_to_float();
+			},
+			20 => {
 				let newblock = MemoryBlock::new();
 				self.add_region(newblock);
 			},
-			15 => {
+			21 => {
 				let param = self.getParam();
 				// syscall
 				self.syscall(param);
 			},
-			16 => {
+			22 => {
 				stopCode = StopCode::Halt;
 				self.status = ProcessorStatus::Halted;
 			},
-			17 => {
+			23 => {
 				stopCode = StopCode::Pause;
 				self.status = ProcessorStatus::Paused;
 			},
-			18 => {
-				let param = self.getParam();
-				self.load_location(param as location);
-			},
-			19 => {
-				let param = self.getParam();
-				self.set_location(param as location);
-			},
-			20 => {
+			24 => {
 				let param = self.getParam();
 				self.load_immediate(param);
 			},
-			21 => {
-				self.alu_to_float();
-			},
-			22 => {
-				self.alu_to_int();
-			},
-			23 => {
-				self.get_lo();
-			},
-			24 => {
-				self.get_hi();
+			25 => {
+				self.push_to_alu();
 			},
 			_ => {
 				stopCode = StopCode::Halt;
@@ -463,24 +415,31 @@ impl Processor {
 	}
 
 	// opcode 1
-	fn load_location_relative_pointer(&mut self, _offset: storage) {
-		let offset = bits_to_i32(_offset);
-		let next = self.next;
-		let value = self._r_get_memory(next, offset);
-		self.bus = value;
-	}
+	// fn load_location_(&mut self, _offset: storage) {
+	// 	let offset = bits_to_i32(_offset);
+	// 	let next = self.next;
+	// 	let value = self._r_get_memory(next, offset);
+	// 	self.bus = value;
+	// }
 
 	// opcode 2
-	fn set_location_relative_pointer(&mut self, _offset: storage) {
-		let offset = bits_to_i32(_offset);
-		let next = self.next;
-		let value = self.bus;
-		self._r_set_memory(next, offset, value);
-	}
+	// fn set_location_relative_pointer(&mut self, _offset: storage) {
+	// 	let offset = bits_to_i32(_offset);
+	// 	let next = self.next;
+	// 	let value = self.bus;
+	// 	self._r_set_memory(next, offset, value);
+	// }
 
 	// opcode 3
 	fn load_location_relative(&mut self, _offset: storage) {
 		let offset = bits_to_i32(_offset);
+		let next = self.next;
+		self.bus = self._get_memory_loc((offset + next as i32) as location);
+	}
+
+	// opcode 3
+	fn load_location_relative_with_bus(&mut self) {
+		let offset = bits_to_i32(self.bus);
 		let next = self.next;
 		self.bus = self._get_memory_loc((offset + next as i32) as location);
 	}
@@ -540,17 +499,17 @@ impl Processor {
 	}
 
 	// opcode 12
-	fn blz(&mut self, relative: storage) -> u32 {
-		self.alu.cmp();
-		if self.alu.compare_result < 0
-		{
-			self.next = ((self.next as i32) + bits_to_i32(relative)) as u32;
-			0
-		}
-		else {
-			2
-		}
-	}
+	// fn blz(&mut self, relative: storage) -> u32 {
+	// 	self.alu.cmp();
+	// 	if self.alu.compare_result < 0
+	// 	{
+	// 		self.next = ((self.next as i32) + bits_to_i32(relative)) as u32;
+	// 		0
+	// 	}
+	// 	else {
+	// 		2
+	// 	}
+	// }
 
 	// opcode 13
 	fn bez(&mut self, relative: storage) -> u32 {
@@ -578,15 +537,20 @@ impl Processor {
 		self.bus = i32_to_bits(syscall(code, bits_to_i32(param)));
 	}
 
-	// opcode 18
+	// opcode 1
 	fn load_location(&mut self, location: location) {
 		self.bus = self._get_memory_loc(location);
 	}
 
-	// opcode 10
+	// opcode 2
 	fn set_location(&mut self, location: location) {
 		let value = self.bus;
 		self._set_memory_loc(location, value);
+	}
+
+	fn load_location_with_bus(&mut self) {
+		let location = self.bus;
+		self.load_location(location);
 	}
 
 	// opcode 20
@@ -596,20 +560,20 @@ impl Processor {
 
 	// opcode 21
 	fn alu_to_float(&mut self) {
-
+		self.alu.mode_float_save_bits();
 	}
 
 	// opcode 22
 	fn alu_to_int(&mut self) {
-
+		self.alu.mode_int_save_bits();
 	}
 
-	fn get_lo(&mut self) -> i32 {
-		0
+	fn get_lo(&mut self) {
+		self.bus = self.alu.lo;
 	}
 
-	fn get_hi(&mut self) -> i32 {
-		0
+	fn get_hi(&mut self) {
+		self.bus = self.alu.hi;
 	}
 
 	// fn print(&mut self, location: u32) {
@@ -708,7 +672,7 @@ impl Processor {
 	}
 
 	// helper
-	fn _get_memory_loc(&mut self, location: location) -> storage {
+	fn _get_memory_loc(&self, location: location) -> storage {
 		let offset = location as usize % MEM_SIZE;
 		let region_num = (location as f64 / MEM_SIZE as f64).floor() as usize;
 
@@ -836,6 +800,10 @@ impl ALU {
 	}
 
 	fn cmp(&mut self) {
+		match self.mode {
+			ALUMode::int => self.cmp_int(),
+			ALUMode::float => self.cmp_float(),
+		}
 	}
 
 
@@ -873,9 +841,9 @@ impl ALU {
 			self.value_a_int as i64 * self.value_b_int as i64
 		);
 
-		let loMask: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
-		let hiMask: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
-
+		let loMask = 0x00000000ffffffff;
+		let hiMask = 0xffffffff00000000;
+		
 		self.hi = (hiMask & bits) as u32;
 		self.lo = (loMask & bits) as u32;
 	}
@@ -884,10 +852,10 @@ impl ALU {
 		let value: f64 = (self.value_a_float * self.value_b_float).into();
 		let bits = value.to_bits();
 
-		let loMask = 0b0000000000000000000000000000000011111111111111111111111111111111;
-		let hiMask = 0b1111111111111111111111111111111100000000000000000000000000000000;
+		let loMask = 0x00000000ffffffff;
+		let hiMask = 0xffffffff00000000;
 
-		self.hi = (hiMask & bits) as u32;
+		self.hi = ((hiMask & bits) >> 32) as u32;
 		self.lo = (loMask & bits) as u32;
 	}
 
@@ -900,10 +868,10 @@ impl ALU {
 		let value: f64 = (self.value_a_float / self.value_b_float).into();
 		let bits = value.to_bits();
 
-		let loMask = 0b0000000000000000000000000000000011111111111111111111111111111111;
-		let hiMask = 0b1111111111111111111111111111111100000000000000000000000000000000;
+		let loMask = 0x00000000ffffffff;
+		let hiMask = 0xffffffff00000000;
 
-		self.hi = (hiMask & bits) as u32;
+		self.hi = ((hiMask & bits) >> 32) as u32;
 		self.lo = (loMask & bits) as u32;
 	}
 
