@@ -1,5 +1,5 @@
 import { SMap } from '../utilTypes';
-import { AsmEmitter, OpcodeFactory, isLabel, isComment, DSLError, catchAndReportErrors, isVariable } from './dslaHelpers';
+import { AsmEmitter, OpcodeFactory, isLabel, isComment, DSLError, catchAndReportErrors, isVariable, AsmEmitterExt } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
 const spaceRegex = / +/g;
@@ -52,7 +52,7 @@ export class AsmCompiler {
 	// [varname] = variable information;
 	private readonly variables: SMap<VarDeclaration>;
 	private readonly labels: SMap<LabelDeclaration>;
-	private readonly opcodes: SMap<AsmEmitter>;
+	private readonly opcodes: SMap<AsmEmitterExt>;
 
 	private readonly elementIndex: Element[];
 
@@ -63,7 +63,7 @@ export class AsmCompiler {
 		this.opcodes = opcodes(this.varGetter, this.labelGetter);
 	}
 
-	private varGetter = (... strings: string[]) => {
+	private varGetter = (... strings: string[]): any => {
 		return strings.map(str => () => {
 			if (str in this.variables) {
 				return this.variables[str].location;
@@ -72,7 +72,7 @@ export class AsmCompiler {
 		});
 	};
 
-	private labelGetter = (... strings: string[]) => {
+	private labelGetter = (... strings: string[]): any => {
 		return strings.map(str => () => {
 			if (str in this.labels) {
 				return this.labels[str].location;

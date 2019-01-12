@@ -5,6 +5,9 @@ import { InitializeWindowBarrel } from '../windowBarrel';
 type fnOf<T> = {
 	[P in keyof T]: () => T[P];
 };
+type mapParts<T, to> = {
+	[P in keyof T]: to;
+};
 
 export type changeParamTypes<T> = T extends (...args: infer InputTuple) => infer R ? (...args: fnOf<InputTuple>) => () => R : unknown;
 
@@ -12,17 +15,19 @@ export function transformer<Inputs extends any[], Return>(func: (...args: Inputs
 	return (...args: fnOf<Inputs>) => () => func(...args.map(a => a()) as any);
 }
 
+export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(... items: T) => mapParts<T, ReturnType>;
+
 export type OpcodeFactory = (
 	/**
-     * Returns the location of a variable
+     * Returns the location of variables
      */
-	varLocationGetter: (...varNames: string[]) => (() => number)[],
+	varLocationGetter: RestFnTo<string, () => number>,
 
 	/**
 	 * Returns something that will return a number
 	 */
-	labelLocationGetter: (...labelNames: string[]) => (() => number)[]
-) => SMap<AsmEmitter>;
+	labelLocationGetter: RestFnTo<string, () => number>
+) => SMap<AsmEmitterExt>;
 
 export function enforceInt(str: string) {
 	return toInt(str);
@@ -42,6 +47,12 @@ export function int(...strings: string[]): () => (number | number[]) {
 }
 
 export type AsmEmitter = (
+	/**
+     * the parameters that were supplied
+     */
+	...parameters: string[]
+) => ((() => number[]) | (() => number[])[])[];
+export type AsmEmitterExt = (
 	/**
      * the parameters that were supplied
      */
@@ -84,7 +95,39 @@ export function isVariable(varName: string) {
 		return varNameRegex.test(varName);
 	return false;
 }
-const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+$/;
+const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+([\+\-]\d+)?$/;
+
+/**
+ * Identifies if there is a constant added to the variable
+ */
+const varNameHasConstRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+([\+\-]\d+)$/;
+/**
+ * Gets the name of the variable
+ */
+const varNameOnlyRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+/;
+/**
+ * Gets the constant value after the variable (if it exists)
+ */
+const varNameConstOnlyRegex = /([\+\-]\d+)$/;
+
+export type VariableParts = {
+	name: string;
+	constant: number;
+	hasConstant: boolean;
+};
+
+function _getVariableParts(str: string): VariableParts {
+	const hasConstant = varNameHasConstRegex.test(str);
+	return {
+		name: str.match(varNameOnlyRegex)![0],
+		constant: hasConstant ? toInt(str.match(varNameConstOnlyRegex)![0]) : 0,
+		hasConstant,
+	};
+}
+
+export function getVariableParts<Ttuple extends string[]>(... strs: Ttuple): mapParts<Ttuple, VariableParts> {
+	return strs.map(_getVariableParts) as mapParts<Ttuple, VariableParts>;
+}
 
 export class DSLError implements Error {
 	name: string = 'DSLError';
@@ -120,4 +163,6 @@ export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: numbe
 InitializeWindowBarrel('DSLAHelpers', {
 	isLabel,
 	isComment,
+	isVariable,
+	getVariableParts,
 });

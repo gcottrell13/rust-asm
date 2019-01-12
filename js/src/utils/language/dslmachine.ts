@@ -10,12 +10,14 @@ export type i = number;
  */
 const _DslOpcodes = {
 	Noop: () =>					[0],
-	AddrToBus: (i:i) =>			[1, i],
-	BusToAddr: (i:i) =>			[2, i],
+	LoadValueAtAddressIntoBus: (i:i) =>			[1, i],
+	SaveValueInBusToLocation: (i: i) =>			[2, i],
+	LoadMemBusToBus: () =>		[5],
+	SaveBusToMemBus: () =>		[6],
 	AluDoAdd: () =>				[9],
 	AluHiToBus: () =>			[16],
 	AluLoToBus: () => 			[17],
-	ImmToBus: (i:i) => 			[24, i],
+	LoadImmmediateToBus: (i: i) => 			[24, i],
 	AluPushFromBus: () =>		[25],
 };
 
