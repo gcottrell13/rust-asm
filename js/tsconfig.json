@@ -7,13 +7,18 @@
         "noImplicitAny": true,
         "moduleResolution": "node",
         "strictNullChecks": true,
+        "allowSyntheticDefaultImports": true,
         "strict": true,
         "jsx": "react",
+        "noImplicitReturns": true,
+        "noErrorTruncation": true,
+        "noImplicitThis": true,
+        "noImplicitUseStrict": true,
         "lib": [
           "es6",
           "dom",
-          "es2017",
-        ],
+          "es2017"
+        ]
     },
     "include": [
         "./src/**/*"
