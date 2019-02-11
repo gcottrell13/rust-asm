@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, FormGroup, ControlLabel, Row, Col, FormControl } from 'react-bootstrap';
+import { Button, FormGroup, Row, Col, FormControl } from 'react-bootstrap';
 import { ProgramInput } from './programInput';
 import './debugger.scss';
 import { ProgramController } from './programController';
@@ -7,6 +7,7 @@ import { AddListener, RemoveListener } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
 import { EventListener } from './utils/EventListener';
 import { Viewscreen } from './viewscreen';
+import { Initialize } from '../utils/rustUtils';
 
 
 interface IState {
@@ -31,10 +32,10 @@ export class DebuggerApplication extends React.Component<{}, IState> {
 					<Col xs={3} className={'program-text'}>
 						{
 							this.state.loaded ? (
-								<ProgramController />
+								<ProgramController/>
 							) : (
-									<ProgramInput />
-								)
+								<ProgramInput onLoad={Initialize}/>
+							)
 						}
 					</Col>
 					<Col xs={5} className={'output'}>
@@ -58,6 +59,6 @@ export class DebuggerApplication extends React.Component<{}, IState> {
 					}}
 				/>
 			</div>
-		)
+		);
 	}
 }
