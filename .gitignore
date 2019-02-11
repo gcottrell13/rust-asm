@@ -12,3 +12,5 @@ Cargo.lock
 /js/package-lock.json
 
 *.code-workspace
+
+js/\.idea/workspace\.xml
