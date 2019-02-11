@@ -25,6 +25,8 @@ cd ../js
 
 webpack
 
+echo "Copying dist"
+
 cd ..
 
 cp -a js/dist/. dist/
