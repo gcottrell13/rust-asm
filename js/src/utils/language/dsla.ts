@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
-import { isArray } from 'util';
 
 // DSL-Assembly
 
@@ -13,7 +12,7 @@ type get = (str: string) => (() => number[])[];
 function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): (() => number[])[] {
 	const [varParts] = getVariableParts(variable);
 
-	if (varParts.hasConstant === false) {
+	if (!varParts.hasConstant) {
 		// then we will use this variable directly
 		const [d] = v(varParts.name);
 		return [
@@ -36,7 +35,7 @@ function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFn
 
 function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): (() => number[])[] {
 	const [varParts] = getVariableParts(dest);
-	if (varParts.hasConstant === false) {
+	if (!varParts.hasConstant) {
 		const [d] = v(varParts.name);
 		return [
 			op.SaveValueInBusToLocation(d),
@@ -54,6 +53,7 @@ function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<
 		op.SaveBusToMemBus(),
 	];
 }
+
 //#endregion
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -84,8 +84,8 @@ const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
 	},
 
 	/**
-     * Load Immediate
-     */
+	 * Load Immediate
+	 */
 	loadi() {
 		return [];
 	},
@@ -100,7 +100,7 @@ export const opcodes: OpcodeFactory = (v, l) => _.mapValues(
 	_opcodes(
 		(s: string) => GetValue(s, v, l),
 		(s: string) => SaveValue(s, v, l)
-	), 
+	),
 	v => (...rest: any[]) => _.flatten(v(...rest))
 );
 

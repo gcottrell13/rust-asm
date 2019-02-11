@@ -15,14 +15,13 @@ export function transformer<Inputs extends any[], Return>(func: (...args: Inputs
 	return (...args: fnOf<Inputs>) => () => func(...args.map(a => a()) as any);
 }
 
-export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(... items: T) => mapParts<T, ReturnType>;
+export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(...items: T) => mapParts<T, ReturnType>;
 
 export type OpcodeFactory = (
 	/**
-     * Returns the location of variables
-     */
+	 * Returns the location of variables
+	 */
 	varLocationGetter: RestFnTo<string, () => number>,
-
 	/**
 	 * Returns something that will return a number
 	 */
@@ -35,7 +34,7 @@ export function enforceInt(str: string) {
 
 /**
  * the order of these declarations is very important
- * @param str 
+ * @param str
  */
 export function int(str: string): () => number;
 export function int(...strings: string[]): () => number[];
@@ -48,14 +47,14 @@ export function int(...strings: string[]): () => (number | number[]) {
 
 export type AsmEmitter = (
 	/**
-     * the parameters that were supplied
-     */
+	 * the parameters that were supplied
+	 */
 	...parameters: string[]
 ) => ((() => number[]) | (() => number[])[])[];
 export type AsmEmitterExt = (
 	/**
-     * the parameters that were supplied
-     */
+	 * the parameters that were supplied
+	 */
 	...parameters: string[]
 ) => (() => number[])[];
 
@@ -72,7 +71,7 @@ export const assemblerDirectives = {
 };
 
 /**
- * 
+ *
  * @param part1 already normalized
  */
 export function isLabel(part1: string) {
@@ -80,6 +79,7 @@ export function isLabel(part1: string) {
 		return labelRegex.test(part1);
 	return false;
 }
+
 const labelRegex = /^\w+:$/;
 
 
@@ -88,6 +88,7 @@ export function isComment(part1: string) {
 		return commentRegex.test(part1);
 	return false;
 }
+
 const commentRegex = /^#/;
 
 export function isVariable(varName: string) {
@@ -95,6 +96,7 @@ export function isVariable(varName: string) {
 		return varNameRegex.test(varName);
 	return false;
 }
+
 const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+([\+\-]\d+)?$/;
 
 /**
@@ -125,7 +127,7 @@ function _getVariableParts(str: string): VariableParts {
 	};
 }
 
-export function getVariableParts<Ttuple extends string[]>(... strs: Ttuple): mapParts<Ttuple, VariableParts> {
+export function getVariableParts<Ttuple extends string[]>(...strs: Ttuple): mapParts<Ttuple, VariableParts> {
 	return strs.map(_getVariableParts) as mapParts<Ttuple, VariableParts>;
 }
 
@@ -154,10 +156,6 @@ export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: numbe
 
 	return errors;
 }
-
-
-
-
 
 
 InitializeWindowBarrel('DSLAHelpers', {

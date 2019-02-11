@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import { GetMemoryBuffer } from '../rustUtils';
 import { contains } from '../generalUtils';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { Buffer } from 'buffer';
 import { bsStyles } from 'react-bootstrap/lib/utils/bootstrapUtils';
 
 // -----------------------------------------------------------------------
@@ -12,10 +11,10 @@ import { bsStyles } from 'react-bootstrap/lib/utils/bootstrapUtils';
 
 enum syscalls {
 	/**
-     * init new buffer with ID from bus (so JS can reference buffer with given ID)
-     * [follow with syscall 2, syscall 3, and 6]
-     * IDs are shared between inputs and outputs
-     */
+	 * init new buffer with ID from bus (so JS can reference buffer with given ID)
+	 * [follow with syscall 2, syscall 3, and 6]
+	 * IDs are shared between inputs and outputs
+	 */
 	CreateBuffer = 1,
 
 	SetBufferHead = 2,
@@ -25,13 +24,13 @@ enum syscalls {
 	DeleteBuffer = 5,
 
 	/**
-     * File stuff
-     */
+	 * File stuff
+	 */
 
 
 	/**
-     * Other
-     */
+	 * Other
+	 */
 	Sleep = 20,
 }
 
@@ -167,6 +166,7 @@ function IsFromWasm(buffer: Buffer) {
 		BufferType.OUTPUT_SCREEN_SIZE,
 	], buffer.type);
 }
+
 function IsToWasm(buffer: Buffer) {
 	return contains([
 		BufferType.INPUT_KEY,
@@ -260,7 +260,7 @@ const _allSyscalls: SMap<SyscallFunction> = {
 
 /**
  * Maps the given syscall code to the appropriate function
- * @param n 
+ * @param n
  */
 export function GetSyscallWithNumber(n: syscalls): SyscallFunction {
 	const name = syscalls[n];
@@ -323,6 +323,7 @@ export function ReadFromBuffer(bufferId: number): Maybe<Int32Array> {
 function _readIntoLocal(buffer: Buffer) {
 	buffer.contents.set(GetMemoryBuffer(buffer.head, buffer.length).getCombined());
 }
+
 function _writeIntoWasm(buffer: Buffer) {
 	GetMemoryBuffer(buffer.head, buffer.length).set(buffer.contents);
 }

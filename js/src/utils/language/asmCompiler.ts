@@ -159,7 +159,7 @@ export class AsmCompiler {
 
 			//#region Variable Declaration
 			else if (first === 'dec' && rest.length >= 1 && isVariable(rest[0])) {
-				this.makeVariable(rest[0]);
+				this.makeVariable(rest[0]); 
 			}
 			//#endregion
 
