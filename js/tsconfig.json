@@ -13,7 +13,6 @@
         "noImplicitReturns": true,
         "noErrorTruncation": true,
         "noImplicitThis": true,
-        "noImplicitUseStrict": true,
         "lib": [
           "es6",
           "dom",
