@@ -1,5 +1,15 @@
 import { SMap } from '../utilTypes';
-import { AsmEmitter, OpcodeFactory, isLabel, isComment, DSLError, catchAndReportErrors, isVariable, AsmEmitterExt } from './dslaHelpers';
+import {
+	AsmEmitter,
+	OpcodeFactory,
+	isLabel,
+	isComment,
+	DSLError,
+	catchAndReportErrors,
+	isVariable,
+	AsmEmitterExt,
+	DSLAggregateError
+} from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
 const spaceRegex = / +/g;
@@ -190,7 +200,7 @@ export class AsmCompiler {
 		}
 		else {
 			errors.forEach(error => console.error(error));
-			throw new Error();
+			throw new DSLAggregateError(errors);
 		}
 	};
 

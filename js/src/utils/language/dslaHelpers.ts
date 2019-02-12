@@ -142,6 +142,21 @@ export class DSLError implements Error {
 	}
 }
 
+export class DSLAggregateError implements Error {
+	name: string = 'DSLAggregate';
+	stack?: string;
+	private _errors: string[];
+
+	constructor(errors: string[]) {
+		this._errors = errors;
+
+	}
+
+	get message() : string {
+		return this._errors.join('\n');
+	}
+}
+
 export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: number, arr: T[]) => void) {
 	const errors: string[] = [];
 

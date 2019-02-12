@@ -21,6 +21,17 @@ const _DslOpcodes = {
 	AluPushFromBus: () => [25],
 };
 
+const comments: {[p in keyof typeof _DslOpcodes]: string} = {
+	Noop: '',
+	LoadValueAtAddressIntoBus: '',
+	SaveValueInBusToLocation: '',
+	LoadMemBusToBus: '',
+	SaveBusToMemBus: '',
+	AluDoAdd: '',
+	AluHiToBus: '',
+	AluLoToBus: '',
+	LoadImmmediateToBus: '',
+	AluPushFromBus: '',
 };
 
 const _transformedDslOpcodes = _.mapValues(_DslOpcodes, transformer);
