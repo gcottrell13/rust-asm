@@ -1,13 +1,18 @@
 import * as React from 'react';
-import { GetBlock, GetInstructionPointer } from '../utils/rustUtils';
+import { GetBlock, GetInstructionPointer } from '../../utils/rustUtils';
 import { Glyphicon } from 'react-bootstrap';
-import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
-import { CheckStatus } from '../utils/controlUtils';
-import { AddListener } from '../utils/debuggerEvents';
-import { Events } from '../utils/enums/Events';
+import { ProcessorStatus } from '../../utils/enums/ProcessorStatus';
+import { CheckStatus } from '../../utils/controlUtils';
+import { AddListener } from '../../utils/debuggerEvents';
+import { Events } from '../../utils/enums/Events';
 
 export interface TextViewerProps {
 	blocksToDisplay: number[];
+	canSetBreakpoints: boolean;
+	getPausedLine: () => number;
+	getBlock: (blockNum: number) => number[];
+
+	hideNullRuns?: boolean;
 }
 
 interface IState {
@@ -24,34 +29,33 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 	};
 
 	refreshMemory() {
+		const { blocksToDisplay, getBlock } = this.props;
+
 		let memory: number[] = [];
 
-		this.props.blocksToDisplay.map((blockNum) => {
-			// GetBlock(blockNum).map(block => {
-			//     block.forEach((value, index) => {
-			//         memory[index] = value;
-			//     });
-			// })
-		});
+		blocksToDisplay.forEach(blockNum => memory.concat(getBlock(blockNum)));
 
 		this.setState({
 			memory,
 		});
 	}
 
-	componentWillMount() {
-		this.refreshMemory();
-		AddListener(Events.PAUSE, this.Pause);
-	}
-
-	Continue = () => {
-		this.setState({});
-	};
-	Pause = () => {
-		this.refreshMemory();
-	}
+	// componentWillMount() {
+	// 	this.refreshMemory();
+	// 	AddListener(Events.PAUSE, this.Pause);
+	// }
+	//
+	// Continue = () => {
+	// 	this.setState({});
+	// };
+	//
+	// Pause = () => {
+	// 	this.refreshMemory();
+	// };
 
 	onClickLine = (lineNumber: number) => {
+		if (!this.props.canSetBreakpoints) return;
+
 		let breakpoints = new Set(this.state.breakpoints.values());
 		if (this.state.breakpoints.has(lineNumber)) {
 			breakpoints.delete(lineNumber);
@@ -62,7 +66,7 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 		this.setState({
 			breakpoints,
 		});
-	}
+	};
 
 	onScroll = (e: any) => {
 		if (e.deltaY < 0) {
@@ -78,17 +82,15 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 	};
 
 	render() {
+		const { hideNullRuns, getPausedLine } = this.props;
+
 		let lines: JSX.Element[] = [];
 
 		let nullsFound = 0;
 
-		let pausedOn = -1;
+		let pausedOn = getPausedLine();
 
 		let viewableLines: number = window.innerHeight / 20 - 1;
-
-		if (CheckStatus([ProcessorStatus.Paused])) {
-			pausedOn = GetInstructionPointer();
-		}
 
 		for (let index = this.state.topLine;
 			lines.length < viewableLines && index < this.state.memory.length;
@@ -100,11 +102,13 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 				break;
 			}
 
-			if (value === 0 && Math.abs(index - pausedOn) > 2) {
-				// nullsFound ++;
-			}
-			else {
-				nullsFound = 0;
+			if (hideNullRuns) {
+				if (value === 0 && Math.abs(index - pausedOn) > 2) {
+					nullsFound++;
+				}
+				else {
+					nullsFound = 0;
+				}
 			}
 
 			if (nullsFound < 2) {
@@ -131,7 +135,7 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 			>
 				{lines}
 			</div>
-		)
+		);
 	}
 }
 
@@ -144,37 +148,35 @@ interface LineDisplayProps {
 	highlighted: boolean;
 }
 
-class LineDisplay extends React.PureComponent<LineDisplayProps> {
-	onClick = () => {
-		this.props.onClick(this.props.lineNum);
+function LineDisplay(props: LineDisplayProps) {
+	const onClick = () => {
+		props.onClick(props.lineNum);
 	};
 
-	render() {
-		let className = 'memory-line';
+	let className = 'memory-line';
 
-		if (this.props.highlighted) {
-			className += ' highlight';
-		}
-		else if (this.props.breakpoint) {
-			className += ' breakpoint';
-		}
-
-
-		return (
-			<div
-				onClick={this.onClick}
-				className={className}
-			>
-				<span className={'line-number'}>
-					{this.props.lineNum}
-				</span>
-				<Glyphicon
-					glyph={'minus'}
-					style={{ visibility: (this.props.breakpoint ? 'visible' : 'hidden') }}
-					className={'breakpoint-glyph'}
-				/>
-				{this.props.value}
-			</div>
-		)
+	if (props.highlighted) {
+		className += ' highlight';
 	}
+	else if (props.breakpoint) {
+		className += ' breakpoint';
+	}
+
+
+	return (
+		<div
+			onClick={onClick}
+			className={className}
+		>
+				<span className={'line-number'}>
+					{props.lineNum}
+				</span>
+			<Glyphicon
+				glyph={'minus'}
+				style={{ visibility: (props.breakpoint ? 'visible' : 'hidden') }}
+				className={'breakpoint-glyph'}
+			/>
+			{props.value}
+		</div>
+	);
 }

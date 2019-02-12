@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { TextViewer } from './textViewer';
+import { TextViewer } from './displays/textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
 import { CheckStatus, StepOverProgram } from '../utils/controlUtils';
 import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
 import { AddListener, RemoveListener } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
 import { EventListener } from './utils/EventListener';
+import { GetBlock, GetInstructionPointer } from '../utils/rustUtils';
 
 export interface ProgramControllerProps {
 
@@ -74,7 +75,12 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
 						)
 					}
 				</div>
-				<TextViewer blocksToDisplay={[0]} />
+				<TextViewer
+					blocksToDisplay={[0]}
+					canSetBreakpoints={false}
+					getPausedLine={() => CheckStatus([ProcessorStatus.Paused]) ? GetInstructionPointer() : -1}
+					getBlock={x => [... GetBlock(x).getCombined()]} // TODO: make better
+				/>
 				<EventListener
 					attach={AddListener}
 					detach={RemoveListener}
@@ -83,6 +89,6 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
 					}}
 				/>
 			</div>
-		)
+		);
 	}
 }

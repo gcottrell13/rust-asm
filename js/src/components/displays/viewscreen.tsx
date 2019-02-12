@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as d from '../utils/drawing';
+import * as d from '../../utils/drawing';
 
 export interface ViewscreenProps {
 	width: number;

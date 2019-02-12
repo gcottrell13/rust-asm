@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Well, FormControl, Button } from 'react-bootstrap';
-import { FilePicker } from './form/filePicker';
+import { FilePicker } from '../form/filePicker';
 
 export interface ProgramInputProps {
 	onLoad: (text: string) => void;

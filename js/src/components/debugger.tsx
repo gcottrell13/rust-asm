@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Button, FormGroup, Row, Col, FormControl } from 'react-bootstrap';
-import { ProgramInput } from './programInput';
+import { ProgramInput } from './displays/programInput';
 import './debugger.scss';
 import { ProgramController } from './programController';
 import { AddListener, RemoveListener } from '../utils/debuggerEvents';
 import { Events } from '../utils/enums/Events';
 import { EventListener } from './utils/EventListener';
-import { Viewscreen } from './viewscreen';
+import { Viewscreen } from './displays/viewscreen';
 import { Initialize } from '../utils/rustUtils';
 
 
