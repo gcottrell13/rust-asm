@@ -31,13 +31,15 @@ export class TextViewer extends React.Component<TextViewerProps, IState> {
 	refreshMemory() {
 		const { blocksToDisplay, getBlock } = this.props;
 
-		let memory: number[] = [];
-
-		blocksToDisplay.forEach(blockNum => memory.concat(getBlock(blockNum)));
+		const memory = blocksToDisplay.reduce((prev, blockNum) => prev.concat(getBlock(blockNum)), [0]);
 
 		this.setState({
 			memory,
 		});
+	}
+
+	componentDidMount(): void {
+		this.refreshMemory();
 	}
 
 	// componentWillMount() {

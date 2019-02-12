@@ -145,27 +145,27 @@ export class DSLError implements Error {
 export class DSLAggregateError implements Error {
 	name: string = 'DSLAggregate';
 	stack?: string;
-	private _errors: string[];
+	private _errors: Error[];
 
-	constructor(errors: string[]) {
+	constructor(errors: Error[]) {
 		this._errors = errors;
 
 	}
 
 	get message() : string {
-		return this._errors.join('\n');
+		return this._errors.map(e => e.message).join('\n');
 	}
 }
 
 export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: number, arr: T[]) => void) {
-	const errors: string[] = [];
+	const errors: Error[] = [];
 
 	list.forEach((element: T, index: number) => {
 		try {
 			fn(element, index, list);
 		}
 		catch (e) {
-			errors.push(`${e.name} ${index}: ${e.message}`);
+			errors.push(new Error(`${e.name} ${index}: ${e.message}`));
 		}
 	});
 

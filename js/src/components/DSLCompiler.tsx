@@ -44,7 +44,7 @@ export function DslCompiler(props: DslCompilerProps) {
 						blocksToDisplay={[1]}
 						canSetBreakpoints={false}
 						getPausedLine={() => -1}
-						getBlock={() => compiledText}
+						getBlock={() => [1, 2, 3]}
 					/>
 				</Col>
 				<Col xs={3}>

@@ -32,46 +32,46 @@ textarea {
         display: flex;
         flex-direction: column;
         overflow-y: hidden;
-        
-        & .text-viewer {
-            font-family: monospace;
-            flex: 1;
+    }
+}
 
-            & .memory-line {
-                background-color: lightgrey;
-                color: black;
-                height: 20px;
+.text-viewer {
+    font-family: monospace;
+    flex: 1;
 
-                & .breakpoint-glyph {
-                    color: rgb(228, 35, 35);
-                    margin-right: 5px;
-                }
+    & .memory-line {
+        background-color: lightgrey;
+        color: black;
+        height: 20px;
 
-                & .line-number {
-                    min-width: 40px;
-                    display: inline-block;
-                    border-right: black 1px solid;
-                    background-color: #b3b3b3;
-                }
-            }
+        & .breakpoint-glyph {
+            color: rgb(228, 35, 35);
+            margin-right: 5px;
+        }
 
-            & .breakpoint {
-                background-color: rgb(226, 138, 138);
-                color: white;
+        & .line-number {
+            min-width: 40px;
+            display: inline-block;
+            border-right: black 1px solid;
+            background-color: #b3b3b3;
+        }
+    }
 
-                & .line-number {
-                    background-color: #bd9a9a;
-                }
-            }
+    & .breakpoint {
+        background-color: rgb(226, 138, 138);
+        color: white;
 
-            & .highlight {
-                background-color: rgb(222, 231, 90);
-                color: rgb(56, 50, 50);
+        & .line-number {
+            background-color: #bd9a9a;
+        }
+    }
 
-                & .line-number {
-                    background-color: #989c5d;
-                }
-            }
+    & .highlight {
+        background-color: rgb(222, 231, 90);
+        color: rgb(56, 50, 50);
+
+        & .line-number {
+            background-color: #989c5d;
         }
     }
 }

@@ -199,7 +199,7 @@ export class AsmCompiler {
 			return codes.join('\n');
 		}
 		else {
-			errors.forEach(error => console.error(error));
+			// errors.forEach(error => console.error(error.message));
 			throw new DSLAggregateError(errors);
 		}
 	};
