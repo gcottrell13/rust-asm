@@ -45,18 +45,20 @@ export function int(...strings: string[]): () => (number | number[]) {
 	return () => strings.map(enforceInt);
 }
 
+export type machineOperation = () => number[];
+
 export type AsmEmitter = (
 	/**
 	 * the parameters that were supplied
 	 */
 	...parameters: string[]
-) => ((() => number[]) | (() => number[])[])[];
+) => (machineOperation | machineOperation[])[];
 export type AsmEmitterExt = (
 	/**
 	 * the parameters that were supplied
 	 */
 	...parameters: string[]
-) => (() => number[])[];
+) => machineOperation[];
 
 export const assemblerDirectives = {
 	'.text'() {
@@ -149,7 +151,6 @@ export class DSLAggregateError implements Error {
 
 	constructor(errors: Error[]) {
 		this._errors = errors;
-
 	}
 
 	get message() : string {

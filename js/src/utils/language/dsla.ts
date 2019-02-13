@@ -1,6 +1,6 @@
 import { DslOpcodes as op } from './dslmachine';
 import * as _ from 'lodash';
-import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter } from './dslaHelpers';
+import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
 
@@ -9,7 +9,7 @@ import { SMap } from '../utilTypes';
 //#region Helpers
 type get = (str: string) => (() => number[])[];
 
-function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): (() => number[])[] {
+function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation[] {
 	const [varParts] = getVariableParts(variable);
 
 	if (!varParts.hasConstant) {
@@ -33,7 +33,7 @@ function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFn
 	];
 }
 
-function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): (() => number[])[] {
+function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation[] {
 	const [varParts] = getVariableParts(dest);
 	if (!varParts.hasConstant) {
 		const [d] = v(varParts.name);

@@ -8,12 +8,13 @@ export interface DslCompilerProps {
 
 }
 
-function useCompiler(text: string): [number[], string, () => void] {
-	const [compiledText, setCompiledText] = useState<number[]>([]);
+function useCompiler(text: string): [string, string, () => void] {
+	const [compiledText, setCompiledText] = useState<string>('');
 	const [compilerError, setCompilerError] = useState('');
 	const compile = () => {
 		try {
-			setCompiledText(dsl2machine(asm2dsl(text)));
+			// setCompiledText(dsl2machine(asm2dsl(text)));
+			setCompiledText(asm2dsl(text));
 		}
 		catch (e) {
 			setCompilerError(e.message);
@@ -40,12 +41,15 @@ export function DslCompiler(props: DslCompilerProps) {
 					/>
 				</Col>
 				<Col xs={3}>
-					<TextViewer
-						blocksToDisplay={[1]}
-						canSetBreakpoints={false}
-						getPausedLine={() => -1}
-						getBlock={() => [1, 2, 3]}
-					/>
+					{/*<TextViewer*/}
+						{/*blocksToDisplay={[1]}*/}
+						{/*canSetBreakpoints={false}*/}
+						{/*getPausedLine={() => -1}*/}
+						{/*getBlock={() => [1, 2, 3]}*/}
+					{/*/>*/}
+					<div>
+						{compiledText}
+					</div>
 				</Col>
 				<Col xs={3}>
 					<Button onClick={compile}>Compile</Button>
