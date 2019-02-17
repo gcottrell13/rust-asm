@@ -8,7 +8,7 @@ import {
 	catchAndReportErrors,
 	isVariable,
 	AsmEmitterExt,
-	DSLAggregateError, machineOperation,
+	DSLAggregateError, machineOperation, startGlobalDeclaration, acceptableVarTypes, continueGlobalDeclaration,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
@@ -62,12 +62,12 @@ class AsmDeclaration extends Element {
 class GlobalVariableDeclaration extends Element {
 	name: string;
 	typeName: string;
-	value: string;
+	value: acceptableVarTypes;
 
 	complete: boolean = false;
 	size: number = 0;
 
-	constructor(location: number, name: string, typeName: string, value: string) {
+	constructor(location: number, name: string, typeName: string, value: acceptableVarTypes) {
 		super(location);
 		this.name = name;
 		this.typeName = typeName;
@@ -178,26 +178,36 @@ export class AsmCompiler {
 			if (section === SECTION.none) {
 				if (first === '.text') {
 					section = SECTION.text;
+					return;
 				}
 				else if (first === '.data') {
 					section = SECTION.data;
+					return;
 				}
-				throw new DSLError('.text or .data must be first in program');
+				else {
+					throw new DSLError('.text or .data must be first in program');
+				}
 			}
 			else if (section === SECTION.data) {
 				if (first === '.text') {
-					section = SECTION.text;
-				}
+					const lastVar = this.getLastDeclaredGlobal();
+					if (!lastVar.complete) {
+						throw new DSLError(`Incomplete data definition for ${lastVar.name}`);
+					}
 
-				// variable declaration
-				const lastVar = this.getLastDeclaredGlobal();
-				if (lastVar && !lastVar.complete) {
-					lineContinueGlobalDeclaration(line, lastVar);
+					section = SECTION.text;
+					return;
 				}
 				else {
-					this.makeGlobal(line);
+					// variable declaration
+					const lastVar = this.getLastDeclaredGlobal();
+					if (lastVar && !lastVar.complete) {
+						lineContinueGlobalDeclaration(line, lastVar);
+					}
+					else {
+						this.makeGlobal(line);
+					}
 				}
-
 				return;
 			}
 
@@ -273,14 +283,18 @@ export class AsmCompiler {
 }
 
 function lineStartGlobalDeclaration(line: string): GlobalVariableDeclaration {
-	const dec = new GlobalVariableDeclaration(0, '', '', '');
-	dec.complete = false;
+	const start = startGlobalDeclaration(line);
+	const dec = new GlobalVariableDeclaration(0, start.name, start.type, start.value);
+	dec.complete = start.complete;
 	return dec;
 }
 
 function lineContinueGlobalDeclaration(line: string, dec: GlobalVariableDeclaration) {
-
-	dec.complete = true;
+	if (!Array.isArray(dec.value))
+		throw new DSLError(`Cannot continue on type ${dec.typeName}`);
+	const { value, complete } = continueGlobalDeclaration(line);
+	dec.complete = complete;
+	dec.value = dec.value.concat(value);
 }
 
 InitializeWindowBarrel('ASMCompiler', {
@@ -289,4 +303,7 @@ InitializeWindowBarrel('ASMCompiler', {
 	spaceRegex,
 	acceptableNumberRegex,
 	acceptableVariableRegex,
+
+	lineStartGlobalDeclaration,
+	lineContinueGlobalDeclaration,
 });

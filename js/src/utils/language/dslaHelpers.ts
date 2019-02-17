@@ -99,16 +99,16 @@ export function isVariable(varName: string) {
 	return false;
 }
 
-const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+([\+\-]\d+)?$/;
+const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*([\+\-]\d+)?$/;
 
 /**
  * Identifies if there is a constant added to the variable
  */
-const varNameHasConstRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+([\+\-]\d+)$/;
+const varNameHasConstRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*([\+\-]\d+)$/;
 /**
  * Gets the name of the variable
  */
-const varNameOnlyRegex = /^[a-zA-Z_$][a-zA-Z_$\d]+/;
+const varNameOnlyRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*/;
 /**
  * Gets the constant value after the variable (if it exists)
  */
@@ -133,28 +133,175 @@ export function getVariableParts<Ttuple extends string[]>(...strs: Ttuple): mapP
 	return strs.map(_getVariableParts) as mapParts<Ttuple, VariableParts>;
 }
 
-export class DSLError implements Error {
-	name: string = 'DSLError';
-	message: string;
-	stack?: string | undefined;
 
-	constructor(msg: string, name?: string) {
-		this.message = msg;
-		this.name = name || this.name;
+function skipChars(str: string, cmp: string | RegExp) {
+	let i = 0;
+	let head = str[0];
+	while (head && head.match(cmp)) {
+		head = str[++i];
+	}
+	return str.substring(i);
+}
+
+const skipWs = (str: string) => skipChars(str, /\s/);
+
+function getChars(str: string, cmp: string | RegExp): [string, string] {
+	let i = 0;
+	let head = str[0];
+	while (head && head.match(cmp)) {
+		head = str[++i];
+	}
+	return [str.substring(0, i), str.substring(i)];
+}
+
+function getNextToken(str: string, pattern?: RegExp): [string, string] {
+	if (pattern) {
+		str = skipWs(str);
+		const match = pattern.exec(str);
+		if (match && str.startsWith(match[0])) {
+			return [match[1] || match[0], str.substring(match[0].length)];
+		}
+		throw new DSLError(`Could not match pattern '${pattern}' at beginning of string: ${str}`);
+	}
+	return getChars(
+		skipWs(str),
+		/[^\s]/
+	);
+}
+
+function expectNextToken(str: string, toBe: string | RegExp | string[]): [string, string] {
+	if (Array.isArray(toBe)) {
+		const [token, rest] = getNextToken(str);
+		if (!toBe.includes(token)) {
+			throw new DSLError(`Expected one of: '${toBe.join(',')}' but got ${token}`);
+		}
+		return [token, rest];
+	}
+	else if (toBe instanceof RegExp) {
+		return getNextToken(str, toBe);
+	}
+	else {
+		const [token, rest] = getNextToken(str);
+		if (token !== toBe) {
+			throw new DSLError(`Error: expected '${toBe}' but got '${token}'`);
+		}
+		return [token, rest];
 	}
 }
 
-export class DSLAggregateError implements Error {
-	name: string = 'DSLAggregate';
-	stack?: string;
-	private _errors: Error[];
+/**
+ * declare a : string = "hello"; // semicolon must be on the same line
+ * declare a : number = 0; // semicolon must be on the same line
+ * declare a : number[] = 0 1 2 3 4;
+ * declare a : number[] =   // if semicolon is not on the same line for array, assume incomplete definition
+ *    0 0 0 0
+ *    0 1 1 0
+ *    0 1 1 0
+ * ;
+ */
+const stringDeclarationRegex = new RegExp(/"(.*)"/);
+const numberDeclarationRegex = new RegExp(/\d+/);
+const arrayDeclarationRegex = new RegExp(/\d+/);
 
-	constructor(errors: Error[]) {
-		this._errors = errors;
+export type acceptableVarTypes = number | number[];
+
+export type startGlobalDeclaration = {
+	name: string;
+	type: 'unit';
+	value: number;
+	complete: true;
+} | {
+	name: string;
+	type: 'array';
+	value: number[];
+	complete: boolean;
+};
+
+export function startGlobalDeclaration(line: string): startGlobalDeclaration {
+	let name: string, type: string, value: string;
+	[, line] = expectNextToken(line, 'declare');
+	[name, line] = expectNextToken(line, varNameOnlyRegex);
+	[, line] = expectNextToken(line, /:/);
+	[type, line] = expectNextToken(line, /string|number|array/);
+	[, line] = expectNextToken(line, /=/);
+	line = skipWs(line);
+
+	switch (type) {
+		case 'string':
+			[value, line] = expectNextToken(line, stringDeclarationRegex);
+			expectNextToken(line, ';');
+			return {
+				name,
+				type: 'array',
+				value: [...value].map(x => x.charCodeAt(0)),
+				complete: true,
+			};
+		case 'number':
+			[value, line] = expectNextToken(line, numberDeclarationRegex);
+			expectNextToken(line, ';');
+			return {
+				name,
+				type: 'unit',
+				value: toInt(value),
+				complete: true,
+			};
+		case 'array':
+			const complete = line.trim().endsWith(';');
+			const arr: number[] = [];
+			while (true) {
+				if (line === '') {
+					break;
+				}
+				[value, line] = expectNextToken(line, arrayDeclarationRegex);
+				arr.push(toInt(value));
+			}
+
+			return {
+				name,
+				type: 'array',
+				value: arr,
+				complete,
+			};
+		default:
+			throw new DSLError('');
+	}
+}
+
+export function continueGlobalDeclaration(line: string): {
+	value: number[],
+	complete: boolean;
+} {
+	let value: string;
+	const complete = line.trim().endsWith(';');
+	const arr: number[] = [];
+	while (true) {
+		if (line === '') {
+			break;
+		}
+		[value, line] = expectNextToken(line, arrayDeclarationRegex);
+		arr.push(toInt(value));
 	}
 
-	get message() : string {
-		return this._errors.map(e => e.message).join('\n');
+	return {
+		value: arr,
+		complete,
+	};
+}
+
+//#region DSL Error
+
+export class DSLError extends Error {
+	message: string;
+
+	constructor(msg: string) {
+		super(msg);
+		this.message = msg;
+	}
+}
+
+export class DSLAggregateError extends Error {
+	constructor(errors: Error[]) {
+		super(errors.map(e => e.message).join('\n'));
 	}
 }
 
@@ -173,10 +320,13 @@ export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: numbe
 	return errors;
 }
 
+//#endregion
 
 InitializeWindowBarrel('DSLAHelpers', {
 	isLabel,
 	isComment,
 	isVariable,
 	getVariableParts,
+	getNextToken,
+	expectNextToken,
 });
