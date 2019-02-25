@@ -27,7 +27,7 @@ enum ProcessorStatus {
 	Empty,
 }
 
-const MEM_SIZE: usize = 2048;
+const MEM_SIZE: usize = 1024 * 32;
 
 type storage = u32;
 type location = u32;
@@ -271,11 +271,11 @@ impl Processor {
 		//	3	memory[current + parameter as int] -> bus
 		//	4	bus -> memory[current + parameter as int]
 
-        //  5   memory[bus] -> bus
-        //  X 6   bus -> memory[bus]
+        //  5   Load with constant offset
+        //  6   Save with constant offset
 
         //  7   memory[current + bus as int] -> bus
-        //  X 8   bus -> memory[current + bus as int]
+        //  8   bus -> memory[current + bus as int]
 
 		//	9	ALU.add
 		//		result -> ALU.hi
@@ -306,6 +306,9 @@ impl Processor {
 
         //  25  bus -> push onto ALU
 
+		//	26	load with variable offset
+		//	27	save with variable offset
+
 		match op {
 			0 => {},
             1 => {
@@ -325,7 +328,14 @@ impl Processor {
 				self.set_location_relative(param);
 			},
 			5 => {
-				self.load_location_with_bus();
+				let pointer = self.getParam();
+				let constant = self.getParam();
+				self.load_with_constant_offset_to_bus(pointer, constant);
+			},
+			6 => {
+				let pointer = self.getParam();
+				let constant = self.getParam();
+				self.save_with_constant_offset_from_bus(pointer, constant);
 			},
 			7 => {
 				self.load_location_relative_with_bus();
@@ -396,6 +406,16 @@ impl Processor {
 			25 => {
 				self.push_to_alu();
 			},
+			26 => {
+				let p1 = self.getParam();
+				let p2 = self.getParam();
+				self.load_with_variable_offset_to_bus(p1, p2);
+			},
+			27 => {
+				let p1 = self.getParam();
+				let p2 = self.getParam();
+				self.save_with_variable_offset_from_bus(p1, p2);
+			},
 			_ => {
 				stopCode = StopCode::Halt;
 				self.status = ProcessorStatus::Halted;
@@ -454,7 +474,7 @@ impl Processor {
 
 	// opcode 5
 	fn push_to_alu(&mut self) {
-		self.alu.push_value(bits_to_i32(self.bus));
+		self.alu.push_value(self.bus);
 	}
 
 	// opcode 6
@@ -548,9 +568,30 @@ impl Processor {
 		self._set_memory_loc(location, value);
 	}
 
-	fn load_location_with_bus(&mut self) {
-		let location = self.bus;
-		self.load_location(location);
+	fn load_with_constant_offset_to_bus(&mut self, p1: location, p2: storage) {
+		let ptr = self._get_memory_loc(p1);
+		let val = self._get_memory_loc(ptr + p2);
+		self.bus = val;
+	}
+
+	fn load_with_variable_offset_to_bus(&mut self, p1: location, p2: location) {
+		let ptr = self._get_memory_loc(p1);
+		let offset = self._get_memory_loc(p2);
+		let val = self._get_memory_loc(ptr + offset);
+		self.bus = val;
+	}
+
+	fn save_with_constant_offset_from_bus(&mut self, p1: location, p2: storage) {
+		let ptr = self._get_memory_loc(p1);
+		let value = self.bus;
+		self._set_memory_loc(ptr + p2, value);
+	}
+	
+	fn save_with_variable_offset_from_bus(&mut self, p1: location, p2: location) {
+		let ptr = self._get_memory_loc(p1);
+		let offset = self._get_memory_loc(p2);
+		let value = self.bus;
+		self._set_memory_loc(ptr + offset, value);
 	}
 
 	// opcode 20
@@ -764,10 +805,10 @@ impl ALU {
 		self.value_b_float = f32::from_bits(i32_to_bits(self.value_b_int));
 	}
 
-	fn push_value(&mut self, value: i32) {
+	fn push_value(&mut self, value: u32) {
 		match self.mode {
-			ALUMode::int => self.push_int(value),
-			ALUMode::float => self.push_float(value),
+			ALUMode::int => self.push_int(bits_to_i32(value)),
+			ALUMode::float => self.push_float(f32::from_bits(value)),
 		}
 	}
 
@@ -812,9 +853,9 @@ impl ALU {
 		self.value_a_int = value;
 	}
 
-	fn push_float(&mut self, value: i32) {
+	fn push_float(&mut self, value: f32) {
 		self.value_b_float = self.value_a_float;
-		self.value_a_float = f32::from_bits(i32_to_bits(value));
+		self.value_a_float = value;
 	}
 
 
