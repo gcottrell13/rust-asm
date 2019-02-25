@@ -1,57 +1,68 @@
 import { DslOpcodes as op } from './dslmachine';
-import * as _ from 'lodash';
-import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation } from './dslaHelpers';
+import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation, DSLError } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
+import { isNullOrWhitespace } from '../stringUtils';
 
 // DSL-Assembly
 
 //#region Helpers
-type get = (str: string) => (() => number[])[];
 
-function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation[] {
-	const [varParts] = getVariableParts(variable);
+const enforce = (...args: (string | undefined)[]) => {
+	if (args.some(isNullOrWhitespace)) {
+		throw new DSLError(`Args must contain valid text. '${args}'`);
+	}
+};
 
-	if (!varParts.hasConstant) {
-		// then we will use this variable directly
-		const [d] = v(varParts.name);
-		return [
-			op.LoadValueAtAddressIntoBus(d),
-		];
+type get = (str: string) => machineOperation;
+
+function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation {
+	const varParts = getVariableParts(variable);
+	if (!varParts) {
+		throw new DSLError(`Could not parse ${variable} to variable expression`);
 	}
 
-	// else this variable is a pointer, and add the constant as an offset
-	const [d] = v(varParts.name);
+	const { variableOffset, constantOffset, name } = varParts;
 
-	return [
-		op.LoadValueAtAddressIntoBus(d),
-		op.AluPushFromBus(),
-		op.LoadImmmediateToBus(() => varParts.constant),
-		op.AluDoAdd(),
-		op.AluHiToBus(),
-		op.LoadMemBusToBus(),
-	];
+	const [d] = v(name);
+
+	if (constantOffset !== null) {
+		// else this variable is a pointer, and add the constant as an offset
+		return op.LoadWithConstantOffsetToBus(d, () => constantOffset);
+	}
+	else if (variableOffset !== null) {
+		const [offset] = v(variableOffset);
+		return op.LoadWithVariableOffsetToBus(d, offset);
+	}
+	else {
+		// then we will use this variable directly
+		return op.LoadValueAtAddressIntoBus(d);
+	}
+
 }
 
-function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation[] {
-	const [varParts] = getVariableParts(dest);
-	if (!varParts.hasConstant) {
-		const [d] = v(varParts.name);
-		return [
-			op.SaveValueInBusToLocation(d),
-		];
+function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation {
+	const varParts = getVariableParts(dest);
+	if (!varParts) {
+		throw new DSLError(`Could not parse ${dest} to variable expression`);
 	}
 
-	const [d] = v(varParts.name);
+	const { variableOffset, constantOffset, name } = varParts;
 
-	return [
-		op.LoadValueAtAddressIntoBus(d),
-		op.AluPushFromBus(),
-		op.LoadImmmediateToBus(() => varParts.constant),
-		op.AluDoAdd(),
-		op.AluHiToBus(),
-		op.SaveBusToMemBus(),
-	];
+	const [d] = v(name);
+
+	if (constantOffset !== null) {
+		// else this variable is a pointer, and add the constant as an offset
+		return op.SaveFromBusWithConstantOffset(d, () => constantOffset);
+	}
+	else if (variableOffset !== null) {
+		const [offset] = v(variableOffset);
+		return op.SaveFromBusWithVariableOffset(d, offset);
+	}
+	else {
+		// then we will use this variable directly
+		return op.SaveValueInBusToLocation(d);
+	}
 }
 
 //#endregion
@@ -60,6 +71,7 @@ function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<
 
 const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
 	add(_dest, _source1, _source2) {
+		enforce(_dest, _source1, _source2);
 		return [
 			Load(_source1),
 			op.AluPushFromBus(),
@@ -72,6 +84,7 @@ const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
 	},
 
 	addi(_dest, _source, _imm) {
+		enforce(_dest, _source, _imm);
 		return [
 			Load(_source),
 			op.AluPushFromBus(),
@@ -96,14 +109,12 @@ const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
 // ------------------------------------------------------------------------------------------------
 
 // returns emitted dsl
-export const opcodes: OpcodeFactory = (v, l) => _.mapValues(
-	_opcodes(
-		(s: string) => GetValue(s, v, l),
-		(s: string) => SaveValue(s, v, l)
-	),
-	v => (...rest: any[]) => _.flatten(v(...rest))
+export const opcodes: OpcodeFactory = (v, l) => _opcodes(
+	(s: string) => GetValue(s, v, l),
+	(s: string) => SaveValue(s, v, l)
 );
 
 InitializeWindowBarrel('DSLA', {
 	opcodes,
+	enforce,
 });

@@ -1,4 +1,3 @@
-import { SMap } from '../utilTypes';
 import * as _ from 'lodash';
 import { transformer, changeParamTypes } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
@@ -12,8 +11,10 @@ const _DslOpcodes = {
 	Noop: () => [0],
 	LoadValueAtAddressIntoBus: (i: i) => [1, i],
 	SaveValueInBusToLocation: (i: i) => [2, i],
-	LoadMemBusToBus: () => [5],
-	SaveBusToMemBus: () => [6],
+	LoadWithConstantOffsetToBus: (variable: i, offset: i) => [5, variable, offset],
+	SaveFromBusWithConstantOffset: (variable: i, offset: i) => [6, variable, offset],
+	LoadWithVariableOffsetToBus: (variable: i, offsetVar: i) => [26, variable, offsetVar],
+	SaveFromBusWithVariableOffset: (variable: i, offsetVar: i) => [26, variable, offsetVar],
 	AluDoAdd: () => [9],
 	AluHiToBus: () => [16],
 	AluLoToBus: () => [17],
@@ -25,8 +26,10 @@ const comments: {[p in keyof typeof _DslOpcodes]: string} = {
 	Noop: '',
 	LoadValueAtAddressIntoBus: '',
 	SaveValueInBusToLocation: '',
-	LoadMemBusToBus: '',
-	SaveBusToMemBus: '',
+	LoadWithConstantOffsetToBus: '',
+	SaveFromBusWithConstantOffset: '',
+	LoadWithVariableOffsetToBus: '',
+	SaveFromBusWithVariableOffset: '',
 	AluDoAdd: '',
 	AluHiToBus: '',
 	AluLoToBus: '',
