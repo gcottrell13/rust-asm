@@ -1,6 +1,7 @@
 import { SMap } from '../utilTypes';
-import { toInt } from '../generalUtils';
+import { toInt, toIntOrNull } from '../generalUtils';
 import { InitializeWindowBarrel } from '../windowBarrel';
+import { isNullOrWhitespace } from '../stringUtils';
 
 type fnOf<T> = {
 	[P in keyof T]: () => T[P];
@@ -26,7 +27,7 @@ export type OpcodeFactory = (
 	 * Returns something that will return a number
 	 */
 	labelLocationGetter: RestFnTo<string, () => number>
-) => SMap<AsmEmitterExt>;
+) => SMap<AsmEmitter>;
 
 export function enforceInt(str: string) {
 	return toInt(str);
@@ -48,12 +49,6 @@ export function int(...strings: string[]): () => (number | number[]) {
 export type machineOperation = () => number[];
 
 export type AsmEmitter = (
-	/**
-	 * the parameters that were supplied
-	 */
-	...parameters: string[]
-) => (machineOperation | machineOperation[])[];
-export type AsmEmitterExt = (
 	/**
 	 * the parameters that were supplied
 	 */
@@ -99,40 +94,59 @@ export function isVariable(varName: string) {
 	return false;
 }
 
-const varNameRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*([\+\-]\d+)?$/;
+//#region variable parsing
 
 /**
- * Identifies if there is a constant added to the variable
  */
-const varNameHasConstRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*([\+\-]\d+)$/;
+const variableRegex = /(([a-zA-Z_$][a-zA-Z_$\d]*)(\[[ \t]*(([+\-]?\d+)|([a-zA-Z_$][a-zA-Z_$\d]*))\])?)/;
+
+const constantRegex = /[+\-]?\d+/;
+
+/**
+ * Evaluated variable expressions can take many forms
+ *
+ * myVar
+ * myVar +1
+ * myVar +otherVar
+ *
+ */
 /**
  * Gets the name of the variable
  */
-const varNameOnlyRegex = /^[a-zA-Z_$][a-zA-Z_$\d]*/;
-/**
- * Gets the constant value after the variable (if it exists)
- */
-const varNameConstOnlyRegex = /([\+\-]\d+)$/;
+const varNameRegex = /[a-zA-Z_$][a-zA-Z_$\d]*/;
 
 export type VariableParts = {
 	name: string;
-	constant: number;
-	hasConstant: boolean;
+	constantOffset: number | null;
+	variableOffset: string | null;
 };
 
-function _getVariableParts(str: string): VariableParts {
-	const hasConstant = varNameHasConstRegex.test(str);
+function _getVariableParts(str: string): VariableParts | null {
+	const result = variableRegex.exec(str);
+	if (!result) {
+		return null;
+	}
+	const [/*zero*/, /*one*/, varName, /*three*/, /*four*/, constantOffset, variableOffset] = result;
+
 	return {
-		name: str.match(varNameOnlyRegex)![0],
-		constant: hasConstant ? toInt(str.match(varNameConstOnlyRegex)![0]) : 0,
-		hasConstant,
+		name: varName,
+		constantOffset: toIntOrNull(constantOffset),
+		variableOffset: isNullOrWhitespace(variableOffset) ? null : variableOffset,
 	};
 }
 
-export function getVariableParts<Ttuple extends string[]>(...strs: Ttuple): mapParts<Ttuple, VariableParts> {
-	return strs.map(_getVariableParts) as mapParts<Ttuple, VariableParts>;
+export function getVariableParts(str: string): VariableParts | null;
+export function getVariableParts<Ttuple extends string[]>(...strs: Ttuple): mapParts<Ttuple, VariableParts | null>;
+export function getVariableParts<Ttuple extends string[]>(...strs: Ttuple): VariableParts | null | mapParts<Ttuple, VariableParts | null> {
+	if (strs.length === 1) {
+		return _getVariableParts(strs[0]);
+	}
+	return strs.map(_getVariableParts) as mapParts<Ttuple, VariableParts | null>;
 }
 
+//#endregion
+
+//#region token parsing
 
 function skipChars(str: string, cmp: string | RegExp) {
 	let i = 0;
@@ -154,14 +168,16 @@ function getChars(str: string, cmp: string | RegExp): [string, string] {
 	return [str.substring(0, i), str.substring(i)];
 }
 
-function getNextToken(str: string, pattern?: RegExp): [string, string] {
+function getNextToken(str: string): [string, string];
+function getNextToken(str: string, pattern: RegExp): [string, string] | null;
+function getNextToken(str: string, pattern?: RegExp): [string, string] | null {
 	if (pattern) {
 		str = skipWs(str);
 		const match = pattern.exec(str);
 		if (match && str.startsWith(match[0])) {
 			return [match[1] || match[0], str.substring(match[0].length)];
 		}
-		throw new DSLError(`Could not match pattern '${pattern}' at beginning of string: ${str}`);
+		return null;
 	}
 	return getChars(
 		skipWs(str),
@@ -178,7 +194,9 @@ function expectNextToken(str: string, toBe: string | RegExp | string[]): [string
 		return [token, rest];
 	}
 	else if (toBe instanceof RegExp) {
-		return getNextToken(str, toBe);
+		const token = getNextToken(str, toBe);
+		if (!token) throw new DSLError(`Could not match pattern`);
+		return token;
 	}
 	else {
 		const [token, rest] = getNextToken(str);
@@ -188,6 +206,10 @@ function expectNextToken(str: string, toBe: string | RegExp | string[]): [string
 		return [token, rest];
 	}
 }
+
+//#endregion
+
+//#region global declaration parsing
 
 /**
  * declare a : string = "hello"; // semicolon must be on the same line
@@ -220,7 +242,7 @@ export type startGlobalDeclaration = {
 export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 	let name: string, type: string, value: string;
 	[, line] = expectNextToken(line, 'declare');
-	[name, line] = expectNextToken(line, varNameOnlyRegex);
+	[name, line] = expectNextToken(line, varNameRegex);
 	[, line] = expectNextToken(line, /:/);
 	[type, line] = expectNextToken(line, /string|number|array/);
 	[, line] = expectNextToken(line, /=/);
@@ -288,6 +310,35 @@ export function continueGlobalDeclaration(line: string): {
 	};
 }
 
+//#endregion
+
+//#region dsl argument parsing
+
+export function parseArguments(_line: string): string[] {
+	let line = _line;
+	let value: string = '';
+	const args: string[] = [];
+
+	while (true) {
+		const token = getNextToken(line, variableRegex) || getNextToken(line, constantRegex);
+
+		if (token) {
+			[value, line] = token;
+			args.push(value);
+			continue;
+		}
+		else if (isNullOrWhitespace(line)) {
+			break;
+		}
+
+		throw new DSLError(`Could not get a parameter from line segment ${line}`);
+	}
+
+	return args;
+}
+
+//#endregion
+
 //#region DSL Error
 
 export class DSLError extends Error {
@@ -329,4 +380,7 @@ InitializeWindowBarrel('DSLAHelpers', {
 	getVariableParts,
 	getNextToken,
 	expectNextToken,
+	startGlobalDeclaration,
+	continueGlobalDeclaration,
+	parseArguments,
 });

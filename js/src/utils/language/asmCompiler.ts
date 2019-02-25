@@ -7,8 +7,12 @@ import {
 	DSLError,
 	catchAndReportErrors,
 	isVariable,
-	AsmEmitterExt,
-	DSLAggregateError, machineOperation, startGlobalDeclaration, acceptableVarTypes, continueGlobalDeclaration,
+	DSLAggregateError,
+	machineOperation,
+	startGlobalDeclaration,
+	acceptableVarTypes,
+	continueGlobalDeclaration,
+	parseArguments,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
@@ -80,7 +84,7 @@ export class AsmCompiler {
 	// [varname] = variable information;
 	private readonly variables: SMap<VarDeclaration>;
 	private readonly labels: SMap<LabelDeclaration>;
-	private readonly opcodes: SMap<AsmEmitterExt>;
+	private readonly opcodes: SMap<AsmEmitter>;
 
 	private readonly elementIndex: Element[];
 
@@ -244,19 +248,15 @@ export class AsmCompiler {
 
 			//#region Other Statements
 			else {
-				const okOpcode = first in this.opcodes;
-				const okRest = rest.map(isAcceptable).every(v => v);
-
-				if (!okOpcode) {
+				if (!(first in this.opcodes)) {
 					throw new DSLError(`Invalid operation: ${first}`);
 				}
 
-				if (!okRest) {
-					throw new DSLError(`Invalid parameters: ${rest.join(' ')}`);
-				}
+				const restString = rest.join(' ');
+				const args = parseArguments(restString);
 
 				const opcode = this.opcodes[first];
-				const r = opcode(...rest);
+				const r = opcode(...args);
 				this.makeAsmStatement(first, r);
 			}
 
