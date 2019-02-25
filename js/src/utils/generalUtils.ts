@@ -30,6 +30,15 @@ export function toInt(n: string): number {
 	return i;
 }
 
+export function toIntOrNull(n: string): number | null {
+	try {
+		return toInt(n);
+	}
+	catch {
+		return null;
+	}
+}
+
 export function group<T>(n: number, arr: ArrayLike<T>): T[][] {
 	let groups: T[][] = [];
 	let lastGroup: T[] = [];

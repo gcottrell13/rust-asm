@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Col, FormControl, Row } from 'react-bootstrap';
 import { TextViewer } from './displays/textViewer';
 import { asm2dsl, dsl2machine } from '../utils/language/compilers';
-import { isNotNullOrWhitespace } from '../utils/stringUtils';
+import { isNullOrWhitespace } from '../utils/stringUtils';
 
 export interface DslCompilerProps {
 
@@ -54,7 +54,7 @@ export function DslCompiler(props: DslCompilerProps) {
 				<Col xs={3}>
 					<Button onClick={compile}>Compile</Button>
 					{
-						isNotNullOrWhitespace(compilerError) && (
+						!isNullOrWhitespace(compilerError) && (
 							<div>
 								{compilerError}
 							</div>

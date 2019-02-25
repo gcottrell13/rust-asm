@@ -1,5 +1,4 @@
 
-export function isNotNullOrWhitespace(str: string) {
-	if (str === null) return false;
-	return !str.match(/^\s*$/g);
+export function isNullOrWhitespace(str: string | undefined | null): boolean {
+	return !str || str.match(/^\s*$/g) !== null;
 }
