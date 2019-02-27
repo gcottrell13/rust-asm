@@ -10,7 +10,7 @@ import { isNullOrWhitespace } from '../stringUtils';
 
 const enforce = (...args: (string | undefined)[]) => {
 	if (args.some(isNullOrWhitespace)) {
-		throw new DSLError(`Args must contain valid text. '${args}'`);
+		throw new DSLError(`Args must contain valid text. Got '${args.map((x, i) => `[${i}]: ${x}`).join(', ')}'`);
 	}
 };
 

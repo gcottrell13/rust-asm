@@ -15,6 +15,7 @@ function useCompiler(text: string): [string, string, () => void] {
 		try {
 			// setCompiledText(dsl2machine(asm2dsl(text)));
 			setCompiledText(asm2dsl(text));
+			setCompilerError('Compiled successfully');
 		}
 		catch (e) {
 			setCompilerError(e.message);
@@ -24,7 +25,7 @@ function useCompiler(text: string): [string, string, () => void] {
 	return [compiledText, compilerError, compile];
 }
 
-export function DslCompiler(props: DslCompilerProps) {
+export function DslCompiler({}: DslCompilerProps) {
 	const [dslText, setDslText] = useState('');
 	const [compiledText, compilerError, compile] = useCompiler(dslText);
 
@@ -38,6 +39,7 @@ export function DslCompiler(props: DslCompilerProps) {
 						placeholder="DSL Here"
 						onChange={(event: any) => setDslText(event.target.value)}
 						value={dslText}
+						style={{ minHeight: 'calc(100vh - 60px)' }}
 					/>
 				</Col>
 				<Col xs={3}>

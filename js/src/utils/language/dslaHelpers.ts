@@ -29,10 +29,6 @@ export type OpcodeFactory = (
 	labelLocationGetter: RestFnTo<string, () => number>
 ) => SMap<AsmEmitter>;
 
-export function enforceInt(str: string) {
-	return toInt(str);
-}
-
 /**
  * the order of these declarations is very important
  * @param str
@@ -40,10 +36,11 @@ export function enforceInt(str: string) {
 export function int(str: string): () => number;
 export function int(...strings: string[]): () => number[];
 export function int(...strings: string[]): () => (number | number[]) {
+	const ints = strings.map(toInt);
 	if (strings.length === 1) {
-		return () => enforceInt(strings[0]);
+		return () => ints[0];
 	}
-	return () => strings.map(enforceInt);
+	return () => ints;
 }
 
 export type machineOperation = () => number[];
@@ -98,7 +95,7 @@ export function isVariable(varName: string) {
 
 /**
  */
-const variableRegex = /(([a-zA-Z_$][a-zA-Z_$\d]*)(\[[ \t]*(([+\-]?\d+)|([a-zA-Z_$][a-zA-Z_$\d]*))\])?)/;
+const variableRegex = /(([a-zA-Z_$][a-zA-Z_$\d]*)(\[[ \t]*(([+\-]?\d+)|([a-zA-Z_$][a-zA-Z_$\d]*))[ \t]*\])?)/;
 
 const constantRegex = /[+\-]?\d+/;
 
@@ -128,11 +125,17 @@ function _getVariableParts(str: string): VariableParts | null {
 	}
 	const [/*zero*/, /*one*/, varName, /*three*/, /*four*/, constantOffset, variableOffset] = result;
 
-	return {
+	const varParts = {
 		name: varName,
 		constantOffset: toIntOrNull(constantOffset),
 		variableOffset: isNullOrWhitespace(variableOffset) ? null : variableOffset,
 	};
+
+	if (varParts.constantOffset === null && varParts.variableOffset === null && varParts.name.length !== str.length) {
+		throw new DSLError(`Could not parse offset of '${str}'`);
+	}
+
+	return varParts;
 }
 
 export function getVariableParts(str: string): VariableParts | null;
@@ -185,23 +188,23 @@ function getNextToken(str: string, pattern?: RegExp): [string, string] | null {
 	);
 }
 
-function expectNextToken(str: string, toBe: string | RegExp | string[]): [string, string] {
+function expectNextToken(str: string, toBe: string | RegExp | string[], customError?: string): [string, string] {
 	if (Array.isArray(toBe)) {
 		const [token, rest] = getNextToken(str);
 		if (!toBe.includes(token)) {
-			throw new DSLError(`Expected one of: '${toBe.join(',')}' but got ${token}`);
+			throw new DSLError(customError || `Expected one of: '${toBe.join(',')}' but got ${token}`);
 		}
 		return [token, rest];
 	}
 	else if (toBe instanceof RegExp) {
 		const token = getNextToken(str, toBe);
-		if (!token) throw new DSLError(`Could not match pattern`);
+		if (!token) throw new DSLError(customError || `Could not match pattern`);
 		return token;
 	}
 	else {
 		const [token, rest] = getNextToken(str);
 		if (token !== toBe) {
-			throw new DSLError(`Error: expected '${toBe}' but got '${token}'`);
+			throw new DSLError(customError || `Error: expected '${toBe}' but got '${token}'`);
 		}
 		return [token, rest];
 	}
@@ -241,11 +244,11 @@ export type startGlobalDeclaration = {
 
 export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 	let name: string, type: string, value: string;
-	[, line] = expectNextToken(line, 'declare');
-	[name, line] = expectNextToken(line, varNameRegex);
-	[, line] = expectNextToken(line, /:/);
-	[type, line] = expectNextToken(line, /string|number|array/);
-	[, line] = expectNextToken(line, /=/);
+	[, line] = expectNextToken(line, 'declare', `Expected 'declare'`);
+	[name, line] = expectNextToken(line, varNameRegex, `Expected a variable name after 'declare'`);
+	[, line] = expectNextToken(line, /:/, `Expected a ':'`);
+	[type, line] = expectNextToken(line, /string|number|array/, 'Expected either string, number, or array for declaration type');
+	[, line] = expectNextToken(line, /=/, `Expected a '='`);
 	line = skipWs(line);
 
 	switch (type) {
