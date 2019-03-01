@@ -21,6 +21,8 @@
     "bootstrap": "^4.2.1",
     "keycode": "^2.2.0",
     "lodash": "^4.17.11",
+    "monaco-editor": "^0.15.6",
+    "monaco-editor-webpack-plugin": "^1.7.0",
     "react": "^16.8.1",
     "react-bootstrap": "^0.32.4",
     "react-dom": "^16.8.1",
@@ -29,6 +31,7 @@
     "tslint-loader": "^3.5.4",
     "tslint-microsoft-contrib": "^5.2.1",
     "tslint-react": "^3.6.0",
-    "vrsource-tslint-rules": "^6.0.0"
+    "vrsource-tslint-rules": "^6.0.0",
+    "webpack": "^4.29.5"
   }
 }

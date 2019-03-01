@@ -23,6 +23,8 @@ cp "target/wasm32-unknown-unknown/release/$wasmFilename" "../dist"
 
 cd ../js
 
+rm -rf /dist/*
+
 webpack
 
 echo "Copying dist"
@@ -30,6 +32,7 @@ echo "Copying dist"
 cd ..
 
 cp -a js/dist/. dist/
+cp js/src/index.html dist/
 
 cd dist
 ln -s ../js/node_modules node_modules

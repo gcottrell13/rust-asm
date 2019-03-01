@@ -5,6 +5,24 @@ import { loadWasmAsync } from './utils/webAssembly';
 import { getWasmImports } from './utils/wasmImports';
 import { MAIN } from './components/main';
 
+(self as any).MonacoEnvironment = {
+	getWorkerUrl(moduleId: any, label: string) {
+		if (label === 'json') {
+			return './json.worker.bundle.js';
+		}
+		if (label === 'css') {
+			return './css.worker.bundle.js';
+		}
+		if (label === 'html') {
+			return './html.worker.bundle.js';
+		}
+		if (label === 'typescript' || label === 'javascript') {
+			return './ts.worker.bundle.js';
+		}
+		return './editor.worker.bundle.js';
+	}
+}
+
 loadWasmAsync('./dsl_wasm.wasm', getWasmImports()).then(() => {
 	ReactDOM.render(
 		<MAIN />,
