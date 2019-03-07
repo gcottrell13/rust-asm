@@ -7,6 +7,7 @@ export const MAIN = () => {
 	return (
 		<Tabs
 			id={'tabs'}
+			mountOnEnter={true}
 		>
 			<Tab 
 				title={'Debugger'}

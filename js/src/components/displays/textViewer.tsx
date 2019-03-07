@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import { GetBlock, GetInstructionPointer } from '../../utils/rustUtils';
 import { Glyphicon } from 'react-bootstrap';
 import { ProcessorStatus } from '../../utils/enums/ProcessorStatus';
@@ -10,137 +10,100 @@ export interface TextViewerProps {
 	blocksToDisplay: number[];
 	canSetBreakpoints: boolean;
 	getPausedLine: () => number;
-	getBlock: (blockNum: number) => number[];
+	getBlock: (blockNum: number) => (number | string)[];
 
+	allowEditing?: boolean;
 	hideNullRuns?: boolean;
 }
 
-interface IState {
-	memory: number[];
-	breakpoints: Set<number>;
-	topLine: number;
-}
+export function TextViewer({
+	blocksToDisplay,
+	canSetBreakpoints,
+	getBlock,
+	getPausedLine,
+	hideNullRuns = false,
+	allowEditing = false,
+}: TextViewerProps) {
+	const [breakpoints, setBreakpoint] = useState<Set<number>>(new Set());
+	const [topLine, setTopLine] = useState(1);
 
-export class TextViewer extends React.Component<TextViewerProps, IState> {
-	state: IState = {
-		memory: [],
-		breakpoints: new Set(),
-		topLine: 1,
-	};
+	const onClickLine = (lineNumber: number) => {
+		if (!canSetBreakpoints) return;
 
-	refreshMemory() {
-		const { blocksToDisplay, getBlock } = this.props;
-
-		const memory = blocksToDisplay.reduce((prev, blockNum) => prev.concat(getBlock(blockNum)), [0]);
-
-		this.setState({
-			memory,
-		});
-	}
-
-	componentDidMount(): void {
-		this.refreshMemory();
-	}
-
-	// componentWillMount() {
-	// 	this.refreshMemory();
-	// 	AddListener(Events.PAUSE, this.Pause);
-	// }
-	//
-	// Continue = () => {
-	// 	this.setState({});
-	// };
-	//
-	// Pause = () => {
-	// 	this.refreshMemory();
-	// };
-
-	onClickLine = (lineNumber: number) => {
-		if (!this.props.canSetBreakpoints) return;
-
-		let breakpoints = new Set(this.state.breakpoints.values());
-		if (this.state.breakpoints.has(lineNumber)) {
-			breakpoints.delete(lineNumber);
+		let newBreakpoints = new Set(breakpoints.values());
+		if (newBreakpoints.has(lineNumber)) {
+			newBreakpoints.delete(lineNumber);
 		}
 		else {
-			breakpoints.add(lineNumber);
+			newBreakpoints.add(lineNumber);
 		}
-		this.setState({
-			breakpoints,
-		});
+		setBreakpoint(newBreakpoints);
 	};
 
-	onScroll = (e: any) => {
+	const onScroll = (e: any) => {
 		if (e.deltaY < 0) {
-			this.setState({
-				topLine: Math.max(this.state.topLine - 1, 1),
-			});
+			setTopLine(Math.max(topLine - 1, 1));
 		}
 		else if (e.deltaY > 0) {
-			this.setState({
-				topLine: Math.min(this.state.topLine + 1, this.state.memory.length - 1),
-			});
+			setTopLine(Math.min(topLine + 1, memory.length - 1));
 		}
 	};
 
-	render() {
-		const { hideNullRuns, getPausedLine } = this.props;
+	const memory = blocksToDisplay.reduce<(string | number)[]>((prev, blockNum) => prev.concat(getBlock(blockNum)), ['']);
 
-		let lines: JSX.Element[] = [];
+	let lines: JSX.Element[] = [];
 
-		let nullsFound = 0;
+	let nullsFound = 0;
 
-		let pausedOn = getPausedLine();
+	let pausedOn = getPausedLine();
 
-		let viewableLines: number = window.innerHeight / 20 - 1;
+	let viewableLines: number = window.innerHeight / 20 - 1;
 
-		for (let index = this.state.topLine;
-			lines.length < viewableLines && index < this.state.memory.length;
-			index++) {
+	for (let index = topLine;
+		lines.length < viewableLines && index < memory.length;
+		index++) {
 
-			let value = this.state.memory[index];
+		let value = memory[index];
 
-			if (value === undefined) {
-				break;
+		if (value === undefined) {
+			break;
+		}
+
+		if (hideNullRuns) {
+			if (value === 0 && Math.abs(index - pausedOn) > 2) {
+				nullsFound++;
 			}
-
-			if (hideNullRuns) {
-				if (value === 0 && Math.abs(index - pausedOn) > 2) {
-					nullsFound++;
-				}
-				else {
-					nullsFound = 0;
-				}
-			}
-
-			if (nullsFound < 2) {
-				lines.push(
-					<LineDisplay
-						value={value}
-						lineNum={index}
-						onClick={this.onClickLine}
-						breakpoint={this.state.breakpoints.has(index)}
-						highlighted={index === pausedOn}
-						key={index}
-					/>
-				);
-			}
-			else if (nullsFound === 2) {
-				lines.push(<div key={index}>...</div>);
+			else {
+				nullsFound = 0;
 			}
 		}
 
-		return (
-			<div
-				className={'text-viewer'}
-				onWheel={this.onScroll}
-			>
-				{lines}
-			</div>
-		);
+		if (nullsFound < 2) {
+			lines.push(
+				<LineDisplay
+					value={value}
+					lineNum={index}
+					onClick={onClickLine}
+					breakpoint={breakpoints.has(index)}
+					highlighted={index === pausedOn}
+					key={index}
+				/>
+			);
+		}
+		else if (nullsFound === 2) {
+			lines.push(<div key={index}>...</div>);
+		}
 	}
-}
 
+	return (
+		<div
+			className={'text-viewer full-height'}
+			onWheel={onScroll}
+		>
+			{lines}
+		</div>
+	);
+}
 
 interface LineDisplayProps {
 	value: string | number;

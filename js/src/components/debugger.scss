@@ -5,7 +5,7 @@ body,
 }
 textarea {
     resize: none;
- }
+}
 
 .debugger-container {
     height: 100%;
@@ -104,4 +104,8 @@ textarea {
     position: absolute;
     left: 0;
     top: 0;
+}
+
+.full-height {
+    height: 100%;
 }

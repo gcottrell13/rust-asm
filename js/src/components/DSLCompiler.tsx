@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Button, Col, FormControl, Row } from 'react-bootstrap';
+import { Button, Col, FormControl, Row, Tab } from 'react-bootstrap';
 import { TextViewer } from './displays/textViewer';
 import { asm2dsl, dsl2machine } from '../utils/language/compilers';
 import { isNullOrWhitespace } from '../utils/stringUtils';
+import { MyMonacoEditor } from './displays/monacoEditor/MyMonacoEditor';
 
 export interface DslCompilerProps {
 
@@ -29,31 +30,34 @@ export function DslCompiler({}: DslCompilerProps) {
 	const [dslText, setDslText] = useState('');
 	const [compiledText, compilerError, compile] = useCompiler(dslText);
 
+	const options = {
+		selectOnLineNumbers: false,
+	};
+
 	return (
 		<div className={'input-container'}>
-			<Row>
-				<Col xs={3} className={'text-input-container'}>
-					<FormControl
-						className={'text-input'}
-						componentClass="textarea"
-						placeholder="DSL Here"
-						onChange={(event: any) => setDslText(event.target.value)}
+			<Row className={'full-height'}>
+				<Col xs={5} className={'text-input-container full-height'}>
+					<MyMonacoEditor
+						width={'100%'}
+						height={'calc(100vh - 60px)'}
+						language="dsla"
+						theme="dsla"
 						value={dslText}
-						style={{ minHeight: 'calc(100vh - 60px)' }}
+						onChange={setDslText}
+						options={options}
+						editorDidMount={e => e.focus()}
 					/>
 				</Col>
-				<Col xs={3}>
-					{/*<TextViewer*/}
-						{/*blocksToDisplay={[1]}*/}
-						{/*canSetBreakpoints={false}*/}
-						{/*getPausedLine={() => -1}*/}
-						{/*getBlock={() => [1, 2, 3]}*/}
-					{/*/>*/}
-					<div>
-						{compiledText}
-					</div>
+				<Col xs={5} className={'full-height'}>
+					<TextViewer
+						blocksToDisplay={[compiledText.length]}
+						canSetBreakpoints={false}
+						getPausedLine={() => -1}
+						getBlock={() => compiledText.split('\n')}
+					/>
 				</Col>
-				<Col xs={3}>
+				<Col xs={2}>
 					<Button onClick={compile}>Compile</Button>
 					{
 						!isNullOrWhitespace(compilerError) && (
