@@ -12,7 +12,7 @@ import {
 	startGlobalDeclaration,
 	acceptableVarTypes,
 	continueGlobalDeclaration,
-	parseArguments,
+	parseArguments, AsmToMachineCodes,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
@@ -31,17 +31,8 @@ abstract class Element {
 	get location() {
 		return this._location;
 	}
-}
 
-class VarDeclaration extends Element {
-	name: string;
-	declaration: string[];
-
-	constructor(location: number, name: string, declaration: string[]) {
-		super(location);
-		this.name = name;
-		this.declaration = declaration;
-	}
+	abstract emit(): number[];
 }
 
 class LabelDeclaration extends Element {
@@ -51,15 +42,23 @@ class LabelDeclaration extends Element {
 		super(location);
 		this.name = name;
 	}
+
+	emit(): number[] {
+		return [];
+	}
 }
 
 class AsmDeclaration extends Element {
-	operations: machineOperation[];
+	operations: AsmToMachineCodes;
 	op: string;
-	constructor(location: number, op: string, operations: machineOperation[]) {
+	constructor(location: number, op: string, operations: AsmToMachineCodes) {
 		super(location);
 		this.op = op;
 		this.operations = operations;
+	}
+
+	emit(): number[] {
+		return [];
 	}
 }
 
@@ -69,7 +68,6 @@ class GlobalVariableDeclaration extends Element {
 	value: acceptableVarTypes;
 
 	complete: boolean = false;
-	size: number = 0;
 
 	constructor(location: number, name: string, typeName: string, value: acceptableVarTypes) {
 		super(location);
@@ -77,12 +75,17 @@ class GlobalVariableDeclaration extends Element {
 		this.typeName = typeName;
 		this.value = value;
 	}
+
+	emit(): number[] {
+		return Array.isArray(this.value) ? this.value : [this.value];
+	}
+
 }
 
 export class AsmCompiler {
 
 	// [varname] = variable information;
-	private readonly variables: SMap<VarDeclaration>;
+	private readonly variables: SMap<GlobalVariableDeclaration>;
 	private readonly labels: SMap<LabelDeclaration>;
 	private readonly opcodes: SMap<AsmEmitter>;
 
@@ -135,25 +138,20 @@ export class AsmCompiler {
 		}
 	}
 
-	private makeVariable(str: string, ...value: string[]) {
-		if (str in this.variables) {
-			throw new DSLError(`Already have a variable '${str}'`);
-		}
-		else {
-			const v = new VarDeclaration(this.getNextElementIndex(), str, value);
-			this.insertElement(v);
-			this.variables[str] = v;
-		}
-	}
-
-	private makeAsmStatement(op: string, params: machineOperation[]) {
+	private makeAsmStatement(op: string, params: AsmToMachineCodes) {
 		const a = new AsmDeclaration(this.getNextElementIndex(), op, params);
 		this.insertElement(a);
 	}
 
 	private makeGlobal(line: string) {
 		const a = lineStartGlobalDeclaration(line);
-		this.globalsIndex.push(a);
+		if (a.name in this.variables) {
+			throw new DSLError(`Already have a variable '${a.name}'`);
+		}
+		else {
+			this.variables[a.name] = a;
+			this.globalsIndex.push(a);
+		}
 	}
 
 	private getLastDeclaredGlobal() {
@@ -172,7 +170,12 @@ export class AsmCompiler {
 
 		const errors = catchAndReportErrors(text, (line) => {
 			// normalize the line
-			const norm = line.trim().replace(spaceRegex, ' ').split(' ');
+			line = line.trim();
+			if (line.length === 0) {
+				return;
+			}
+
+			const norm = line.replace(spaceRegex, ' ').split(' ');
 
 			if (norm.length === 0)
 				return;
@@ -239,13 +242,6 @@ export class AsmCompiler {
 			}
 			//#endregion
 
-			//#region Variable Declaration
-			else if (first === 'let' && rest.length >= 1 && isVariable(rest[0])) {
-				const [varName, declaration] = [...rest];
-				this.makeVariable(varName, ...declaration);
-			}
-			//#endregion
-
 			//#region Other Statements
 			else {
 				if (!(first in this.opcodes)) {
@@ -256,7 +252,7 @@ export class AsmCompiler {
 				const args = parseArguments(restString);
 
 				const opcode = this.opcodes[first];
-				const r = opcode(...args);
+				const r = opcode(args);
 				this.makeAsmStatement(first, r);
 			}
 
@@ -270,7 +266,12 @@ export class AsmCompiler {
 			// flatten all statements into giant array of callbacks
 			// invoke each callback to generate values
 			// return
-			const codes: number[] = [];
+			let codes: (string | number)[] = [];
+
+			this.globalsIndex.forEach((gvd: GlobalVariableDeclaration) => {
+				codes.push(`#${gvd.name}: ${gvd.typeName}`);
+				codes = codes.concat(gvd.emit());
+			});
 
 			return codes.join('\n');
 		}

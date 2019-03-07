@@ -10,6 +10,7 @@
     "source-map-loader": "^0.2.4",
     "style-loader": "^0.21.0",
     "typescript": "^3.3.3",
+    "webpack-cli": "^3.2.3",
     "webpack-dev-server": "^3.1.14"
   },
   "dependencies": {

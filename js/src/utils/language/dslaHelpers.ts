@@ -44,13 +44,18 @@ export function int(...strings: string[]): () => (number | number[]) {
 }
 
 export type machineOperation = () => number[];
+export interface AsmToMachineCodes {
+	operations: machineOperation[];
+	generatingOperation: string;
+}
 
+
+/**
+ * @param parameters The parameters that were supplied
+ */
 export type AsmEmitter = (
-	/**
-	 * the parameters that were supplied
-	 */
-	...parameters: string[]
-) => machineOperation[];
+	parameters: string[]
+) => AsmToMachineCodes;
 
 export const assemblerDirectives = {
 	'.text'() {
@@ -359,17 +364,18 @@ export class DSLAggregateError extends Error {
 	}
 }
 
-export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: number, arr: T[]) => void) {
+export function catchAndReportErrors<T>(list: T[], fn: (element: T, index: number) => void) {
 	const errors: Error[] = [];
 
-	list.forEach((element: T, index: number) => {
+	for (let index = 0; index < list.length; index++) {
+		const element = list[index];
 		try {
-			fn(element, index, list);
+			fn(element, index);
 		}
 		catch (e) {
 			errors.push(new Error(`${e.name} ${index}: ${e.message}`));
 		}
-	});
+	}
 
 	return errors;
 }

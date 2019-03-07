@@ -1,10 +1,16 @@
 import { DslOpcodes as op } from './dslmachine';
-import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation, DSLError } from './dslaHelpers';
+import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation, DSLError, AsmToMachineCodes } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { SMap } from '../utilTypes';
 import { isNullOrWhitespace } from '../stringUtils';
+import _ from 'lodash';
 
 // DSL-Assembly
+
+export const DslaInstructionRegistration = {
+	add: 'Add',
+	addi: 'Add immediate',
+	loadi: 'Load immediate',
+};
 
 //#region Helpers
 
@@ -69,7 +75,19 @@ function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
-const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
+type asmEmitterInternal = (
+	/**
+	 * the parameters that were supplied
+	 */
+	...parameters: string[]
+) => machineOperation[];
+
+type dsla = typeof DslaInstructionRegistration;
+type dslaOpcodes = {
+	[p in keyof dsla]: asmEmitterInternal;
+};
+
+const _opcodes = (Load: get, Save: get): dslaOpcodes => ({
 	add(_dest, _source1, _source2) {
 		enforce(_dest, _source1, _source2);
 		return [
@@ -109,9 +127,15 @@ const _opcodes = (Load: get, Save: get): SMap<AsmEmitter> => ({
 // ------------------------------------------------------------------------------------------------
 
 // returns emitted dsl
-export const opcodes: OpcodeFactory = (v, l) => _opcodes(
-	(s: string) => GetValue(s, v, l),
-	(s: string) => SaveValue(s, v, l)
+export const opcodes: OpcodeFactory = (v, l) => _.mapValues(
+	_opcodes(
+		(s: string) => GetValue(s, v, l),
+		(s: string) => SaveValue(s, v, l)
+	),
+	v => (args: string[]) => ({
+		operations: v(...args),
+		generatingOperation: args.join(' '),
+	})
 );
 
 InitializeWindowBarrel('DSLA', {

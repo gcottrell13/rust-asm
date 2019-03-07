@@ -45,7 +45,9 @@ module.exports = {
         ]
     },
     plugins: [
-        new MonacoWebpackPlugin(),
+        new MonacoWebpackPlugin({
+            languages: [],
+        }),
     ],
 
     optimization: {

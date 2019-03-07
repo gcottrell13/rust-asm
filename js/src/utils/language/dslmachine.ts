@@ -22,7 +22,7 @@ const _DslOpcodes = {
 	AluPushFromBus: () => [25],
 };
 
-const comments: {[p in keyof typeof _DslOpcodes]: string} = {
+export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
 	Noop: '',
 	LoadValueAtAddressIntoBus: '',
 	SaveValueInBusToLocation: '',
