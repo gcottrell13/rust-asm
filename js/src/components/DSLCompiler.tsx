@@ -62,7 +62,7 @@ export function DslCompiler({}: DslCompilerProps) {
 					{
 						!isNullOrWhitespace(compilerError) && (
 							<div>
-								{compilerError}
+								{compilerError.split('\n').map((x, i) => <div key={i}>{x}</div>)}
 							</div>
 						)
 					}
