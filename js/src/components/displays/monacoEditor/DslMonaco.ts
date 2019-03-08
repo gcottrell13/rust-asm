@@ -49,8 +49,9 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 
 		// defines the data region
 		dataRegion: [
+			{ include: '@whitespace' },
 
-			[/^declare/, 'keyword'],
+			[/^var/, 'keyword'],
 			[/number|string|array/, 'type'],
 
 			{ include: '@varNames' },
@@ -60,12 +61,13 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 			[/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-teminated string
 			[/"/, 'string', '@string_double'],
 
-			[/[;:=]/, ''],
+			[/[:=]/, ''],
 			['.text', { token: 'keyword', switchTo: '@textRegion' }],
 		],
 
 		// defines the text region
 		textRegion: [
+			{ include: '@whitespace' },
 
 			// instructions
 			[/^[a-zA-Z_$][a-zA-Z_$\d]*/, {
@@ -80,7 +82,6 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 			{ include: '@varNames' },
 			{ include: '@numbers' },
 
-			[';', ''],
 			['.data', { token: 'keyword', switchTo: '@dataRegion' }],
 		],
 

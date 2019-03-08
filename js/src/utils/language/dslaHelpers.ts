@@ -88,7 +88,7 @@ export function isComment(part1: string) {
 	return false;
 }
 
-const commentRegex = /^#/;
+const commentRegex = /^\/\//;
 
 export function isVariable(varName: string) {
 	if (varName)
@@ -166,6 +166,9 @@ function skipChars(str: string, cmp: string | RegExp) {
 }
 
 const skipWs = (str: string) => skipChars(str, /\s/);
+function expectEOL(str: string) {
+	if (skipWs(str) !== '') throw new DSLError(`Expected the EOL, but got ${str}`);
+}
 
 function getChars(str: string, cmp: string | RegExp): [string, string] {
 	let i = 0;
@@ -239,18 +242,16 @@ export type startGlobalDeclaration = {
 	name: string;
 	type: 'unit';
 	value: number;
-	complete: true;
 } | {
 	name: string;
 	type: 'array';
 	value: number[];
-	complete: boolean;
 };
 
 export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 	let name: string, type: string, value: string;
-	[, line] = expectNextToken(line, 'declare', `Expected 'declare'`);
-	[name, line] = expectNextToken(line, varNameRegex, `Expected a variable name after 'declare'`);
+	[, line] = expectNextToken(line, 'var', `Expected 'var'`);
+	[name, line] = expectNextToken(line, varNameRegex, `Expected a variable name after 'var'`);
 	[, line] = expectNextToken(line, /:/, `Expected a ':'`);
 	[type, line] = expectNextToken(line, /string|number|array/, 'Expected either string, number, or array for declaration type');
 	[, line] = expectNextToken(line, /=/, `Expected a '='`);
@@ -259,24 +260,21 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 	switch (type) {
 		case 'string':
 			[value, line] = expectNextToken(line, stringDeclarationRegex);
-			expectNextToken(line, ';');
+			expectEOL(line);
 			return {
 				name,
 				type: 'array',
 				value: [...value].map(x => x.charCodeAt(0)),
-				complete: true,
 			};
 		case 'number':
 			[value, line] = expectNextToken(line, numberDeclarationRegex);
-			expectNextToken(line, ';');
+			expectEOL(line);
 			return {
 				name,
 				type: 'unit',
 				value: toInt(value),
-				complete: true,
 			};
 		case 'array':
-			const complete = line.trim().endsWith(';');
 			const arr: number[] = [];
 			while (true) {
 				if (line === '') {
@@ -285,24 +283,19 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 				[value, line] = expectNextToken(line, arrayDeclarationRegex);
 				arr.push(toInt(value));
 			}
-
 			return {
 				name,
 				type: 'array',
 				value: arr,
-				complete,
 			};
 		default:
 			throw new DSLError('');
 	}
 }
 
-export function continueGlobalDeclaration(line: string): {
-	value: number[],
-	complete: boolean;
-} {
+export function continueGlobalDeclaration(line: string): number[] {
 	let value: string;
-	const complete = line.trim().endsWith(';');
+
 	const arr: number[] = [];
 	while (true) {
 		if (line === '') {
@@ -312,10 +305,7 @@ export function continueGlobalDeclaration(line: string): {
 		arr.push(toInt(value));
 	}
 
-	return {
-		value: arr,
-		complete,
-	};
+	return arr;
 }
 
 //#endregion

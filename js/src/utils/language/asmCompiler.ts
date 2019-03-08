@@ -67,8 +67,6 @@ class GlobalVariableDeclaration extends Element {
 	typeName: string;
 	value: acceptableVarTypes;
 
-	complete: boolean = false;
-
 	constructor(location: number, name: string, typeName: string, value: acceptableVarTypes) {
 		super(location);
 		this.name = name;
@@ -197,22 +195,17 @@ export class AsmCompiler {
 			}
 			else if (section === SECTION.data) {
 				if (first === '.text') {
-					const lastVar = this.getLastDeclaredGlobal();
-					if (!lastVar.complete) {
-						throw new DSLError(`Incomplete data definition for ${lastVar.name}`);
-					}
-
 					section = SECTION.text;
 					return;
 				}
 				else {
 					// variable declaration
 					const lastVar = this.getLastDeclaredGlobal();
-					if (lastVar && !lastVar.complete) {
-						lineContinueGlobalDeclaration(line, lastVar);
-					}
-					else {
+					if (doesLineStartNewGlobal(line)) {
 						this.makeGlobal(line);
+					}
+					else if (lastVar) {
+						lineContinueGlobalDeclaration(line, lastVar);
 					}
 				}
 				return;
@@ -283,19 +276,22 @@ export class AsmCompiler {
 
 }
 
-function lineStartGlobalDeclaration(line: string): GlobalVariableDeclaration {
-	const start = startGlobalDeclaration(line);
-	const dec = new GlobalVariableDeclaration(0, start.name, start.type, start.value);
-	dec.complete = start.complete;
-	return dec;
+function doesLineStartNewGlobal(line: string): boolean {
+	return line.startsWith('var');
+
 }
 
-function lineContinueGlobalDeclaration(line: string, dec: GlobalVariableDeclaration) {
-	if (!Array.isArray(dec.value))
-		throw new DSLError(`Cannot continue on type ${dec.typeName}`);
-	const { value, complete } = continueGlobalDeclaration(line);
-	dec.complete = complete;
+function lineStartGlobalDeclaration(line: string): GlobalVariableDeclaration {
+	const start = startGlobalDeclaration(line);
+	return new GlobalVariableDeclaration(0, start.name, start.type, start.value);
+}
+
+function lineContinueGlobalDeclaration(line: string, dec: GlobalVariableDeclaration): GlobalVariableDeclaration {
+	if (!Array.isArray(dec.value) || dec.typeName !== 'array')
+		throw new DSLError(`Cannot continue on type ${dec.typeName} with value of type ${typeof dec.value}`);
+	const value = continueGlobalDeclaration(line);
 	dec.value = dec.value.concat(value);
+	return dec;
 }
 
 InitializeWindowBarrel('ASMCompiler', {
