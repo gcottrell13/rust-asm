@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo "==========================================================="
 echo "BUILDING TO WASM"
 echo "==========================================================="
@@ -17,25 +18,10 @@ rm -rf ../dist/*
 # Compile to wasm
 cargo +nightly build --target wasm32-unknown-unknown --release
 
-echo "Moved WASM binary to \dist"
 # Move to dist
 cp "target/wasm32-unknown-unknown/release/$wasmFilename" "../dist"
 
-cd ../js
-
-rm -rf /dist/*
-
-webpack
-
-echo "Copying dist"
-
-cd ..
-
-cp -a js/dist/. dist/
-cp js/src/index.html dist/
-
-cd dist
-ln -s ../js/node_modules node_modules
+echo "Moved WASM binary to \dist"
 
 # Minify wasm output
 # Note: if wasm-gc becomes too slow for development, create a separate script for a production build

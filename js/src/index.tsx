@@ -23,7 +23,7 @@ import { MAIN } from './components/main';
 	}
 }
 
-loadWasmAsync('./dsl_wasm.wasm', getWasmImports()).then(() => {
+loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {
 	ReactDOM.render(
 		<MAIN />,
 		document.getElementById('output')
