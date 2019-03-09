@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor';
+import { languages } from 'monaco-editor';
 import { DslaInstructionRegistration } from '../../../utils/language/dsla';
 
 const instructionEntries = Object.entries(DslaInstructionRegistration);
@@ -131,13 +132,14 @@ monaco.editor.defineTheme('dsla', {
 
 //#endregion
 
-function getRegionSuggestion(... strings: string[]): monaco.languages.CompletionItem[] {
+function getRegionSuggestion(line: string, ... strings: string[]): monaco.languages.CompletionItem[] {
+	const startsWithDot = line.startsWith('.');
 	return strings
 		.map(x => ({
 			label: '.' + x,
 			kind: monaco.languages.CompletionItemKind.Keyword,
 			insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-			insertText: x + '\n',
+			insertText: (startsWithDot ? '' : '.') + x + '\n',
 		}));
 }
 
@@ -178,16 +180,40 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 	let suggestions: monaco.languages.CompletionItem[] = [];
 
 	if (region === null) {
-		suggestions = getRegionSuggestion('data', 'text');
+		suggestions = getRegionSuggestion(currentLine, 'data', 'text');
 		console.log('region null', suggestions);
 	}
 
 	else if (region === 'data') {
-		suggestions = getRegionSuggestion('text');
+		suggestions = getRegionSuggestion(currentLine, 'text');
+		suggestions = suggestions.concat(
+			{
+				label: 'var',
+				kind: languages.CompletionItemKind.Keyword,
+				insertText: 'var',
+			},
+			{
+				label: 'string',
+				kind: languages.CompletionItemKind.Class,
+				insertText: 'string',
+			},
+			{
+				label: 'number',
+				kind: languages.CompletionItemKind.Class,
+				insertText: 'number',
+			},
+			{
+				label: 'array',
+				kind: languages.CompletionItemKind.Class,
+				insertText: 'array',
+			});
 	}
 
 	else if (region === 'text') {
-		suggestions = getRegionSuggestion('data');
+		suggestions = getRegionSuggestion(currentLine, 'data');
+		// TODO
+		const currentInstruction = instructionEntries
+			.find(([key, comment]) => currentLine.startsWith(key));
 	}
 
 
