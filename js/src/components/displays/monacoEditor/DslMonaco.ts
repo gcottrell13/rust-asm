@@ -131,11 +131,21 @@ monaco.editor.defineTheme('dsla', {
 
 //#endregion
 
+function getRegionSuggestion(... strings: string[]): monaco.languages.CompletionItem[] {
+	return strings
+		.map(x => ({
+			label: '.' + x,
+			kind: monaco.languages.CompletionItemKind.Keyword,
+			insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+			insertText: x + '\n',
+		}));
+}
+
 function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Position)
 	: monaco.languages.ProviderResult<monaco.languages.CompletionList> {
 
 	const lines = model.getLinesContent();
-	const currentLine = model.getLineContent(position.lineNumber);
+	const currentLine = model.getLineContent(position.lineNumber).trim();
 	// 0	neither .data nor .text
 	// 1.	.data
 	// 1.1	defining string
@@ -146,13 +156,13 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 	// 2.	.text
 	// 2.1
 
-	if (currentLine.startsWith('#')) {
+	if (currentLine.startsWith('//')) {
 		return { suggestions: [] };
 	}
 
 	let region: 'data' | 'text' | null = null;
 
-	for (let i = lines.length - 1; i >= 0; i++) {
+	for (let i = lines.length - 1; i >= 0; i--) {
 		const line = lines[i].trim();
 
 		if (line === '.data') {
@@ -165,23 +175,24 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 		}
 	}
 
+	let suggestions: monaco.languages.CompletionItem[] = [];
+
 	if (region === null) {
-		return {
-			suggestions: ['.data', '.text']
-				.map(x => ({
-					label: x,
-					kind: monaco.languages.CompletionItemKind.Keyword,
-					insertText: x + '\n',
-				})),
-		};
+		suggestions = getRegionSuggestion('data', 'text');
+		console.log('region null', suggestions);
 	}
 
-	if (region === 'data') {
-
+	else if (region === 'data') {
+		suggestions = getRegionSuggestion('text');
 	}
+
+	else if (region === 'text') {
+		suggestions = getRegionSuggestion('data');
+	}
+
 
 	return {
-		suggestions: [],
+		suggestions,
 	};
 }
 
