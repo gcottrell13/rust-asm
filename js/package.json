@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "serve": "webpack-dev-server"
+    "serve": "webpack-dev-server",
+    "watch": "webpack --watch"
   },
   "devDependencies": {
     "awesome-typescript-loader": "^5.2.1",

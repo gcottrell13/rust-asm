@@ -15,4 +15,3 @@ ln -s ../src/node_modules node_modules
 cd ..
 
 cp ./src/index.html ./dist/index.html
-./node_modules/.bin/webpack --watch
