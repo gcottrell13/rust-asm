@@ -238,13 +238,19 @@ const arrayDeclarationRegex = new RegExp(/\d+/);
 
 export type acceptableVarTypes = number | number[];
 
+
+export enum VariableType {
+	Unit = 'Unit',
+	Array = 'Array',
+}
+
 export type startGlobalDeclaration = {
 	name: string;
-	type: 'unit';
+	type: VariableType.Unit;
 	value: number;
 } | {
 	name: string;
-	type: 'array';
+	type: VariableType.Array;
 	value: number[];
 };
 
@@ -252,9 +258,7 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 	let name: string, type: string, value: string;
 	[, line] = expectNextToken(line, 'var', `Expected 'var'`);
 	[name, line] = expectNextToken(line, varNameRegex, `Expected a variable name after 'var'`);
-	[, line] = expectNextToken(line, /:/, `Expected a ':'`);
 	[type, line] = expectNextToken(line, /string|number|array/, 'Expected either string, number, or array for declaration type');
-	[, line] = expectNextToken(line, /=/, `Expected a '='`);
 	line = skipWs(line);
 
 	switch (type) {
@@ -263,7 +267,7 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 			expectEOL(line);
 			return {
 				name,
-				type: 'array',
+				type: VariableType.Array,
 				value: [...value].map(x => x.charCodeAt(0)),
 			};
 		case 'number':
@@ -271,7 +275,7 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 			expectEOL(line);
 			return {
 				name,
-				type: 'unit',
+				type: VariableType.Unit,
 				value: toInt(value),
 			};
 		case 'array':
@@ -285,7 +289,7 @@ export function startGlobalDeclaration(line: string): startGlobalDeclaration {
 			}
 			return {
 				name,
-				type: 'array',
+				type: VariableType.Array,
 				value: arr,
 			};
 		default:

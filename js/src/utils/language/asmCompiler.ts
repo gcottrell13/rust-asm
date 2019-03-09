@@ -12,7 +12,7 @@ import {
 	startGlobalDeclaration,
 	acceptableVarTypes,
 	continueGlobalDeclaration,
-	parseArguments, AsmToMachineCodes,
+	parseArguments, AsmToMachineCodes, VariableType,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
@@ -64,10 +64,10 @@ class AsmDeclaration extends Element {
 
 class GlobalVariableDeclaration extends Element {
 	name: string;
-	typeName: string;
+	typeName: VariableType;
 	value: acceptableVarTypes;
 
-	constructor(location: number, name: string, typeName: string, value: acceptableVarTypes) {
+	constructor(location: number, name: string, typeName: VariableType, value: acceptableVarTypes) {
 		super(location);
 		this.name = name;
 		this.typeName = typeName;
@@ -262,8 +262,15 @@ export class AsmCompiler {
 			let codes: (string | number)[] = [];
 
 			this.globalsIndex.forEach((gvd: GlobalVariableDeclaration) => {
-				codes.push(`#${gvd.name}: ${gvd.typeName}`);
-				codes = codes.concat(gvd.emit());
+				const comment = `#${gvd.typeName} ${gvd.name}`;
+				const emitted = gvd.emit();
+				if (emitted.length > 0) {
+					const [head, ... tail] = emitted;
+					codes.push(`${head} ${comment}`);
+					codes = codes.concat(tail);
+					if (gvd.typeName === VariableType.Array)
+						codes.push(`0 #end ${gvd.name}`);
+				}
 			});
 
 			return codes.join('\n');
@@ -287,7 +294,7 @@ function lineStartGlobalDeclaration(line: string): GlobalVariableDeclaration {
 }
 
 function lineContinueGlobalDeclaration(line: string, dec: GlobalVariableDeclaration): GlobalVariableDeclaration {
-	if (!Array.isArray(dec.value) || dec.typeName !== 'array')
+	if (!Array.isArray(dec.value) || dec.typeName !== VariableType.Array)
 		throw new DSLError(`Cannot continue on type ${dec.typeName} with value of type ${typeof dec.value}`);
 	const value = continueGlobalDeclaration(line);
 	dec.value = dec.value.concat(value);
