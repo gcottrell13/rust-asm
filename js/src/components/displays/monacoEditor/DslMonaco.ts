@@ -2,6 +2,7 @@ import * as monaco from 'monaco-editor';
 import _ from 'lodash';
 import { DslaInstructionRegistration } from '../../../utils/language/dsla';
 import { labelRegex } from '../../../utils/language/dslaHelpers';
+import { isNullOrWhitespace, stringHasContent } from '../../../utils/stringUtils';
 
 const params = {
 	destination: 'Destination',
@@ -28,7 +29,7 @@ const instructionSnippets = _.mapValues(DslaInstructionParameters, (params, key)
 	while (indexes.length < params.length) {
 		indexes.push(indexes.length + 1);
 	}
-	return params.map((p, i) => `$\{${indexes[i]}:${p}}`).join(' ');
+	return params.map((p, i) => `$${p}`).join(' ');
 });
 
 //#region Define language
@@ -190,18 +191,26 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 		return { suggestions: [] };
 	}
 
+	const varNames: string[] = [];
+
 	let region: 'data' | 'text' | null = null;
 
 	for (let i = lines.length - 1; i >= 0; i--) {
 		const line = lines[i].trim();
 
-		if (line === '.data') {
-			region = 'data';
-			break;
+		if (region === null) {
+			if (line === '.data') {
+				region = 'data';
+			}
+			if (line === '.text') {
+				region = 'text';
+			}
 		}
-		if (line === '.text') {
-			region = 'text';
-			break;
+
+		if (line.startsWith('var')) {
+			const parts = line.split(' ').filter(stringHasContent);
+			if (parts.length > 1)
+				varNames.push(parts[1]);
 		}
 	}
 
@@ -248,14 +257,17 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 						label: x,
 						kind: monaco.languages.CompletionItemKind.Function,
 						insertText: `${x} ${instructionSnippets[x]}`,
-						insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
 						documentation: comment,
 					};
 				}));
 		}
 		else {
-
-			// TODO get all variable names
+			suggestions = suggestions.concat(varNames
+				.map(name => ({
+					label: name,
+					kind: monaco.languages.CompletionItemKind.Field,
+					insertText: name,
+				})));
 		}
 	}
 
