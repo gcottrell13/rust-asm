@@ -72,14 +72,20 @@ export const assemblerDirectives = {
 /**
  *
  * @param part1 already normalized
+ * returns label name
  */
-export function isLabel(part1: string) {
-	if (part1)
-		return labelRegex.test(part1);
-	return false;
+export function getLabel(part1: string): string {
+	const result = labelRegex.exec(part1);
+	if (result) {
+		return result[1] || result[0];
+	}
+	return part1;
+}
+export function isLabel(str: string): boolean {
+	return labelRegex.exec(str) !== null;
 }
 
-const labelRegex = /^\w+:$/;
+export const labelRegex = /^@([\w$_][\w\d$_\-]+)$/;
 
 
 export function isComment(part1: string) {

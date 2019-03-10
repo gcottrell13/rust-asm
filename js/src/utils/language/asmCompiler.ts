@@ -12,7 +12,7 @@ import {
 	startGlobalDeclaration,
 	acceptableVarTypes,
 	continueGlobalDeclaration,
-	parseArguments, AsmToMachineCodes, VariableType,
+	parseArguments, AsmToMachineCodes, VariableType, getLabel,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
@@ -226,8 +226,9 @@ export class AsmCompiler {
 			//#region Label
 			else if (isLabel(first)) {
 				if (rest.length === 0) {
-					this.makeLabel(first.replace(':', ''));
-					console.log('Label:', line);
+					const label = getLabel(first);
+					this.makeLabel(label);
+					console.log('Label:', label);
 				}
 				else {
 					throw new DSLError(`Label '${first}' must not have anything else on the same line.`);
