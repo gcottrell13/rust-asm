@@ -20,7 +20,7 @@ import { MAIN } from './components/main';
 			return './ts.worker.bundle.js';
 		}
 		return './editor.worker.bundle.js';
-	}
+	},
 }
 
 loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {

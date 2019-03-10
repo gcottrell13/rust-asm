@@ -1,7 +1,22 @@
 import * as monaco from 'monaco-editor';
 import _ from 'lodash';
-import { DslaInstructionParameters, DslaInstructionRegistration } from '../../../utils/language/dsla';
+import { DslaInstructionRegistration } from '../../../utils/language/dsla';
 import { labelRegex } from '../../../utils/language/dslaHelpers';
+
+const params = {
+	destination: 'Destination',
+	source: 'Source',
+	immediate: 'Immediate',
+	label: 'Label',
+};
+
+const DslaInstructionParameters: {[p in keyof typeof DslaInstructionRegistration]: string[]} = {
+	add: [params.destination, params.source, params.source],
+	addi: [params.destination, params.source, params.immediate],
+	loadi: [params.destination, params.immediate],
+	goto: [params.label],
+	beq: [params.source, params.source, params.label],
+};
 
 const instructionEntries = Object.entries(DslaInstructionRegistration);
 
