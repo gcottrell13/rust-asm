@@ -204,6 +204,9 @@ export class AsmCompiler {
 					section = SECTION.text;
 					return;
 				}
+				else if (isComment(first)) {
+					console.log('Comment:', line);
+				}
 				else {
 					// variable declaration
 					const lastVar = this.getLastDeclaredGlobal();
@@ -260,6 +263,8 @@ export class AsmCompiler {
 
 		});
 
+		this.makeAsmStatement('halt', this.opcodes['halt']([]));
+
 		if (errors.length === 0) {
 
 			// move all global variable declarations to the top
@@ -272,7 +277,7 @@ export class AsmCompiler {
 				const comment = `#${gvd.typeName} ${gvd.name}`;
 				const emitted = gvd.emit();
 				if (emitted.length > 0) {
-					gvd.location = codes.length + 1;
+					gvd.location = codes.length + 1 + 3;
 					const [head, ... tail] = emitted;
 					codes.push(`${head} ${comment}`);
 					codes = codes.concat(tail);
@@ -289,6 +294,7 @@ export class AsmCompiler {
 
 			let expanded: OpcodeBoundWithData[] = [];
 			let expandedWithParamCount = 0;
+			const paramCountCache: SMap<number> = {};
 			const comments = makeCommentTracker();
 
 			this.elementIndex.forEach((e: Element) => {
@@ -296,10 +302,19 @@ export class AsmCompiler {
 					e.location = expandedWithParamCount + codes.length;
 					comments.setInstructionComment(expanded.length, e.operations.generatingOperation);
 					expanded = expanded.concat(e.operations.operations);
-					e.operations.operations.forEach((o) => {
-						const count = (DslOpcodeParamCounts as any)[o.info.name];
-						expandedWithParamCount += count + 1;
-					});
+
+					// count actual memory spaces taken up by this instruction
+					let cache = paramCountCache[e.operations.generatingOperation];
+					if (cache === undefined) {
+						cache = 0;
+						e.operations.operations.forEach((o) => {
+							const count = (DslOpcodeParamCounts as any)[o.info.name];
+							cache += count + 1;
+						});
+						paramCountCache[e.operations.generatingOperation] = cache;
+					}
+
+					expandedWithParamCount += cache;
 				}
 				else if (e instanceof LabelDeclaration) {
 					e.location = expandedWithParamCount + codes.length + 1;

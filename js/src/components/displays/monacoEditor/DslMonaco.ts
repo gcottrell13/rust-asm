@@ -16,6 +16,7 @@ const DslaInstructionParameters: {[p in keyof typeof DslaInstructionRegistration
 	loadi: [params.destination, params.immediate],
 	goto: [params.label],
 	beq: [params.source, params.source, params.label],
+	halt: [],
 };
 
 const instructionEntries = Object.entries(DslaInstructionRegistration);

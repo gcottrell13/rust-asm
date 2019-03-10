@@ -29,6 +29,8 @@ export const _DslOpcodes = {
 
 	JumpWithBusValueRelative: () => [13],
 	BranchTo: (offset: i) => [14, offset],
+
+	Halt: () => [100],
 };
 
 export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
@@ -50,6 +52,7 @@ export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
 	AluSetComparisonInvertMode: '',
 	AluSetComparisonMode: '',
 	GetCurrentPosition: '',
+	Halt: '',
 };
 
 export const DslOpcodeParamCounts: {[p in keyof typeof _DslOpcodes]: number} = {
@@ -71,6 +74,7 @@ export const DslOpcodeParamCounts: {[p in keyof typeof _DslOpcodes]: number} = {
 	SaveFromBusWithConstantOffset: 2,
 	SaveFromBusWithVariableOffset: 2,
 	SaveValueInBusToLocation: 1,
+	Halt: 0,
 };
 
 export const DslCodeToComment: SMap<string> = {};

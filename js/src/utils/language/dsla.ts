@@ -23,6 +23,7 @@ export const DslaInstructionRegistration = {
 	loadi: 'Load immediate',
 	goto: 'Go to label',
 	beq: 'Branch on equal',
+	halt: 'Halt program',
 };
 
 //#region Helpers
@@ -158,6 +159,12 @@ const _opcodes = (Load: get, Save: get, Label: label): dslaOpcodes => ({
 		return [
 			op.LoadImmmediateToBus.bind(Label(_label)),
 			op.JumpWithBusValueRelative.bind(),
+		];
+	},
+
+	halt() {
+		return [
+			op.Halt.bind(),
 		];
 	},
 });
