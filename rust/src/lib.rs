@@ -369,9 +369,6 @@ impl Processor {
 					false => {},
 				}
 			},
-			15 => {
-				self.alu.cmp();
-			},
 			16 => {
 				self.get_hi();
 			},
@@ -518,21 +515,27 @@ impl Processor {
 		match value {
 			0 => {
 				self.alu.compare_mode = ALUCompareMode::equal;
+				self.alu.cmp();
 			},
 			1 => {
 				self.alu.compare_mode = ALUCompareMode::not_equal;
+				self.alu.cmp();
 			},
 			2 => {
 				self.alu.compare_mode = ALUCompareMode::greater_than;
+				self.alu.cmp();
 			},
 			3 => {
 				self.alu.compare_mode = ALUCompareMode::greater_than_or_equal;
+				self.alu.cmp();
 			},
 			4 => {
 				self.alu.compare_mode = ALUCompareMode::lesser_than;
+				self.alu.cmp();
 			},
 			5 => {
 				self.alu.compare_mode = ALUCompareMode::lesser_than_or_equal;
+				self.alu.cmp();
 			},
 			_ => {
 				// do nothing

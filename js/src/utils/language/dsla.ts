@@ -148,8 +148,7 @@ const _opcodes = (Load: get, Save: get, Label: label): dslaOpcodes => ({
 			Load(_source1),
 			op.AluPushFromBus.bind(),
 			Load(_source2),
-			op.AluSetComparisonMode.bind(mode(0)),
-			op.AluDoComparison.bind(),
+			op.AluDoComparisonWithMode.bind(mode(0)),
 			op.BranchTo.bind(Label(_label)),
 		];
 	},
