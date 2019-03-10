@@ -425,14 +425,8 @@ impl Processor {
 				self.bus = counter;
 			},
 			29 => {
-				// 0 for ==, 1 for b > a, _ for b < a
 				let mode = self.getParam();
 				self.switch_alu_compare_mode(mode);
-			},
-			30 => {
-				// 0 for no invert, _ for yes
-				let mode = self.getParam();
-				self.switch_alu_compare_invert_mode(mode);
 			},
 			_ => {
 				stopCode = StopCode::Halt;
@@ -526,22 +520,22 @@ impl Processor {
 				self.alu.compare_mode = ALUCompareMode::equal;
 			},
 			1 => {
+				self.alu.compare_mode = ALUCompareMode::not_equal;
+			},
+			2 => {
 				self.alu.compare_mode = ALUCompareMode::greater_than;
 			},
-			_ => {
-				// -1
+			3 => {
+				self.alu.compare_mode = ALUCompareMode::greater_than_or_equal;
+			},
+			4 => {
 				self.alu.compare_mode = ALUCompareMode::lesser_than;
 			},
-		}
-	}
-
-	fn switch_alu_compare_invert_mode(&mut self, value: storage) {
-		match value {
-			0 => {
-				self.alu.compare_invert_mode = ALUCompareInvertMode::no;
+			5 => {
+				self.alu.compare_mode = ALUCompareMode::lesser_than_or_equal;
 			},
 			_ => {
-				self.alu.compare_invert_mode = ALUCompareInvertMode::yes;
+				// do nothing
 			},
 		}
 	}
@@ -758,13 +752,11 @@ enum ALUMode {
 
 enum ALUCompareMode {
 	greater_than,
+	greater_than_or_equal,
 	equal,
-	lesser_than
-}
-
-enum ALUCompareInvertMode {
-	no,
-	yes,
+	not_equal,
+	lesser_than,
+	lesser_than_or_equal,
 }
 
 struct ALU {
@@ -775,7 +767,6 @@ struct ALU {
 
 	compare_result: bool,
 	compare_mode: ALUCompareMode,
-	compare_invert_mode: ALUCompareInvertMode,
 	hi: u32,
 	lo: u32,
 	mode: ALUMode,
@@ -790,7 +781,6 @@ impl ALU {
 
 			compare_result: false,
 			compare_mode: ALUCompareMode::equal,
-			compare_invert_mode: ALUCompareInvertMode::no,
 			hi: 0,
 			lo: 0,
 			mode: ALUMode::int,
@@ -936,17 +926,6 @@ impl ALU {
 		self.lo = (loMask & bits) as u32;
 	}
 
-	fn cmp_done(&mut self, cmp_result: bool) {
-		match self.compare_invert_mode {
-			ALUCompareInvertMode::yes => {
-				self.compare_result = !cmp_result;
-			},
-			ALUCompareInvertMode::no => {
-				self.compare_result = cmp_result; 
-			}
-		}
-	}
-
 	fn cmp_int(&mut self) {
 		let cmp = match self.compare_mode {
 			ALUCompareMode::equal => {
@@ -958,8 +937,17 @@ impl ALU {
 			ALUCompareMode::lesser_than => {
 				self.value_b_int < self.value_a_int 
 			},
+			ALUCompareMode::not_equal => {
+				self.value_b_int != self.value_a_int
+			},
+			ALUCompareMode::greater_than_or_equal => {
+				self.value_b_int >= self.value_a_int 
+			},
+			ALUCompareMode::lesser_than_or_equal => {
+				self.value_b_int <= self.value_a_int 
+			},
 		}; 
-		self.cmp_done(cmp);
+		self.compare_result = cmp;
 	}
 
 	fn cmp_float(&mut self) {
@@ -973,8 +961,17 @@ impl ALU {
 			ALUCompareMode::lesser_than => {
 				self.value_b_float < self.value_a_float
 			},
+			ALUCompareMode::not_equal => {
+				self.value_b_float != self.value_a_float
+			},
+			ALUCompareMode::greater_than_or_equal => {
+				self.value_b_float >= self.value_a_float 
+			},
+			ALUCompareMode::lesser_than_or_equal => {
+				self.value_b_float <= self.value_a_float 
+			},
 		}; 
-		self.cmp_done(cmp);
+		self.compare_result = cmp;
 	}
 
 }

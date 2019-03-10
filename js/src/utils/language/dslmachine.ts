@@ -25,7 +25,6 @@ export const _DslOpcodes = {
 
 	GetCurrentPosition: () => [28],
 	AluSetComparisonMode: (mode: i) => [29, mode],
-	AluSetComparisonInvertMode: (mode: i) => [30, mode],
 
 	JumpWithBusValueRelative: () => [13],
 	BranchTo: (offset: i) => [14, offset],
@@ -49,7 +48,6 @@ export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
 	AluPushFromBus: '',
 	BranchTo: '',
 	JumpWithBusValueRelative: '',
-	AluSetComparisonInvertMode: '',
 	AluSetComparisonMode: '',
 	GetCurrentPosition: '',
 	Halt: '',
@@ -58,7 +56,6 @@ export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
 export const DslOpcodeParamCounts: {[p in keyof typeof _DslOpcodes]: number} = {
 	GetCurrentPosition: 0,
 	AluSetComparisonMode: 1,
-	AluSetComparisonInvertMode: 1,
 	AluDoComparison: 0,
 	JumpWithBusValueRelative: 0,
 	AluDoAdd: 0,
