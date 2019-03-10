@@ -309,6 +309,8 @@ impl Processor {
 		//	26	load with variable offset
 		//	27	save with variable offset
 
+		//	28	get current instruction counter
+
 		match op {
 			0 => {},
             1 => {
@@ -353,22 +355,22 @@ impl Processor {
 				self.divide();
 			},
 			13 => {
-				self.jump();
+				let b = self.bus;
+				self.jump(b);
 				self.dontMoveParamPointer();
 			},
 			14 => {
 				let param = self.getParam();
-				match self.bgz(param) {
-					0 => self.dontMoveParamPointer(),
-					_ => {},
+				match self.alu.compare_result {
+					true => {
+						self.dontMoveParamPointer();
+						self.jump(param);
+					},
+					false => {},
 				}
 			},
 			15 => {
-				let param = self.getParam();
-				match self.bez(param) {
-					0 => self.dontMoveParamPointer(),
-					_ => {},
-				}
+				self.alu.cmp();
 			},
 			16 => {
 				self.get_hi();
@@ -404,6 +406,8 @@ impl Processor {
 				self.load_immediate(param);
 			},
 			25 => {
+				// all ALU operations should push the bus value to the ALU first
+				// which means that this operation is unnecesary for some cases
 				self.push_to_alu();
 			},
 			26 => {
@@ -415,6 +419,20 @@ impl Processor {
 				let p1 = self.getParam();
 				let p2 = self.getParam();
 				self.save_with_variable_offset_from_bus(p1, p2);
+			},
+			28 => {
+				let counter = self.next;
+				self.bus = counter;
+			},
+			29 => {
+				// 0 for ==, 1 for b > a, _ for b < a
+				let mode = self.getParam();
+				self.switch_alu_compare_mode(mode);
+			},
+			30 => {
+				// 0 for no invert, _ for yes
+				let mode = self.getParam();
+				self.switch_alu_compare_invert_mode(mode);
 			},
 			_ => {
 				stopCode = StopCode::Halt;
@@ -480,68 +498,59 @@ impl Processor {
 	// opcode 6
 	// call add on the ALU and put the result on the bus
 	fn add(&mut self) {
+		self.push_to_alu();
 		self.alu.add();
 	}
 
 	// opcode 7
 	fn negate(&mut self) {
+		self.push_to_alu();
 		self.alu.negate();
 	}
 
 	// opcode 8
 	fn multiply(&mut self) {
+		self.push_to_alu();
 		self.alu.multiply();
 	}
 
 	// opcode 9
 	fn divide(&mut self) {
-		// self.alu.invert();
+		self.push_to_alu();
 		self.alu.divide();
 	}
 
+	fn switch_alu_compare_mode(&mut self, value: storage) {
+		match value {
+			0 => {
+				self.alu.compare_mode = ALUCompareMode::equal;
+			},
+			1 => {
+				self.alu.compare_mode = ALUCompareMode::greater_than;
+			},
+			_ => {
+				// -1
+				self.alu.compare_mode = ALUCompareMode::lesser_than;
+			},
+		}
+	}
+
+	fn switch_alu_compare_invert_mode(&mut self, value: storage) {
+		match value {
+			0 => {
+				self.alu.compare_invert_mode = ALUCompareInvertMode::no;
+			},
+			_ => {
+				self.alu.compare_invert_mode = ALUCompareInvertMode::yes;
+			},
+		}
+	}
+
 	// opcode 10
-	fn jump(&mut self) {
-		let relative = bits_to_i32(self.bus);
-		self.next = ((self.next as i32) + relative) as u32;
-	}
-
-	// opcode 11
-	fn bgz(&mut self, relative: storage) -> u32 {
-		self.alu.cmp();
-		if self.alu.compare_result > 0
-		{
-			self.next = ((self.next as i32) + bits_to_i32(relative)) as u32;
-			0
-		}
-		else {
-			2
-		}
-	}
-
-	// opcode 12
-	// fn blz(&mut self, relative: storage) -> u32 {
-	// 	self.alu.cmp();
-	// 	if self.alu.compare_result < 0
-	// 	{
-	// 		self.next = ((self.next as i32) + bits_to_i32(relative)) as u32;
-	// 		0
-	// 	}
-	// 	else {
-	// 		2
-	// 	}
-	// }
-
-	// opcode 13
-	fn bez(&mut self, relative: storage) -> u32 {
-		self.alu.cmp();
-		if self.alu.compare_result == 0
-		{
-			self.next = ((self.next as i32) + bits_to_i32(relative)) as u32;
-			0
-		}
-		else {
-			2
-		}
+	fn jump(&mut self, jumpTo: storage) {
+		self.next = jumpTo;
+		// let relative = bits_to_i32(jumpTo);
+		// self.next = ((self.next as i32) + relative) as u32;
 	}
 
 	// opcode 14
@@ -747,13 +756,26 @@ enum ALUMode {
 	float
 }
 
+enum ALUCompareMode {
+	greater_than,
+	equal,
+	lesser_than
+}
+
+enum ALUCompareInvertMode {
+	no,
+	yes,
+}
+
 struct ALU {
 	value_a_int: i32, // recent value
 	value_b_int: i32, // oldest value
 	value_a_float: f32,
 	value_b_float: f32,
 
-	compare_result: i32,
+	compare_result: bool,
+	compare_mode: ALUCompareMode,
+	compare_invert_mode: ALUCompareInvertMode,
 	hi: u32,
 	lo: u32,
 	mode: ALUMode,
@@ -766,7 +788,9 @@ impl ALU {
 			value_a_float: 0.0,
 			value_b_float: 0.0,
 
-			compare_result: 0,
+			compare_result: false,
+			compare_mode: ALUCompareMode::equal,
+			compare_invert_mode: ALUCompareInvertMode::no,
 			hi: 0,
 			lo: 0,
 			mode: ALUMode::int,
@@ -912,12 +936,45 @@ impl ALU {
 		self.lo = (loMask & bits) as u32;
 	}
 
-	fn cmp_int(&mut self) {
+	fn cmp_done(&mut self, cmp_result: bool) {
+		match self.compare_invert_mode {
+			ALUCompareInvertMode::yes => {
+				self.compare_result = !cmp_result;
+			},
+			ALUCompareInvertMode::no => {
+				self.compare_result = cmp_result; 
+			}
+		}
+	}
 
+	fn cmp_int(&mut self) {
+		let cmp = match self.compare_mode {
+			ALUCompareMode::equal => {
+				self.value_b_int == self.value_a_int
+			},
+			ALUCompareMode::greater_than => {
+				self.value_b_int > self.value_a_int
+			},
+			ALUCompareMode::lesser_than => {
+				self.value_b_int < self.value_a_int 
+			},
+		}; 
+		self.cmp_done(cmp);
 	}
 
 	fn cmp_float(&mut self) {
-
+		let cmp = match self.compare_mode {
+			ALUCompareMode::equal => {
+				self.value_b_float == self.value_a_float
+			},
+			ALUCompareMode::greater_than => {
+				self.value_b_float > self.value_a_float
+			},
+			ALUCompareMode::lesser_than => {
+				self.value_b_float < self.value_a_float
+			},
+		}; 
+		self.cmp_done(cmp);
 	}
 
 }
