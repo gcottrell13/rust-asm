@@ -3,17 +3,47 @@ import { toInt, toIntOrNull } from '../generalUtils';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { isNullOrWhitespace } from '../stringUtils';
 
-type fnOf<T> = {
+type keysToFunctions<T> = {
 	[P in keyof T]: () => T[P];
 };
 type mapParts<T, to> = {
 	[P in keyof T]: to;
 };
 
-export type changeParamTypes<T> = T extends (...args: infer InputTuple) => infer R ? (...args: fnOf<InputTuple>) => () => R : unknown;
+type opcodeInfoBindType<T> =
+	T extends (... args: number[]) => number[] ?
+		(... args: argsToFunctions<T>) => OpcodeBoundWithData
+	: unknown;
 
-export function transformer<Inputs extends any[], Return>(func: (...args: Inputs) => Return) {
-	return (...args: fnOf<Inputs>) => () => func(...args.map(a => a()) as any);
+export interface OpcodeInformation<T> {
+	bind: opcodeInfoBindType<T>;
+	// call: argsAndReturnToFunctions<T>;
+	name: string;
+}
+
+export interface OpcodeBoundWithData {
+	call: () => number[];
+	info: OpcodeInformation<any>;
+}
+
+type argsToFunctions<T> =
+	T extends (... args: infer InputTuple) => any ?
+		keysToFunctions<InputTuple> : [];
+
+export type argsAndReturnToFunctions<T> =
+	T extends (...args: infer InputTuple) => infer R ?
+	(...args: keysToFunctions<InputTuple>) => () => R :
+		() => () => [];
+
+export function transformer<Inputs extends number[]>(func: (...args: Inputs) => number[]): OpcodeInformation<(... args: Inputs) => number[]> {
+	const info = {
+		bind: (...args: argsToFunctions<typeof func>) => ({
+			call: () => func(...args.map(a => a()) as any),
+			info,
+		}),
+		name: func.name,
+	};
+	return info as any;
 }
 
 export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(...items: T) => mapParts<T, ReturnType>;
@@ -43,9 +73,13 @@ export function int(...strings: string[]): () => (number | number[]) {
 	return () => ints;
 }
 
+export function mode(i: number): () => number {
+	return () => i;
+}
+
 export type machineOperation = () => number[];
 export interface AsmToMachineCodes {
-	operations: machineOperation[];
+	operations: OpcodeBoundWithData[];
 	generatingOperation: string;
 }
 

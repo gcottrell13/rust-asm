@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { transformer, changeParamTypes } from './dslaHelpers';
+import { transformer, argsAndReturnToFunctions, OpcodeInformation } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
 
@@ -17,10 +17,18 @@ const _DslOpcodes = {
 	LoadWithVariableOffsetToBus: (variable: i, offsetVar: i) => [26, variable, offsetVar],
 	SaveFromBusWithVariableOffset: (variable: i, offsetVar: i) => [27, variable, offsetVar],
 	AluDoAdd: () => [9],
+	AluDoComparison: () => [15],
 	AluHiToBus: () => [16],
 	AluLoToBus: () => [17],
 	LoadImmmediateToBus: (i: i) => [24, i],
 	AluPushFromBus: () => [25],
+
+	GetCurrentPosition: () => [28],
+	AluSetComparisonMode: (mode: i) => [29, mode],
+	AluSetComparisonInvertMode: (mode: i) => [30, mode],
+
+	JumpWithBusValueRelative: () => [13],
+	BranchTo: (offset: i) => [14, offset],
 };
 
 export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
@@ -32,10 +40,37 @@ export const DslOpcodeComments: {[p in keyof typeof _DslOpcodes]: string} = {
 	LoadWithVariableOffsetToBus: '',
 	SaveFromBusWithVariableOffset: '',
 	AluDoAdd: '',
+	AluDoComparison: '',
 	AluHiToBus: '',
 	AluLoToBus: '',
 	LoadImmmediateToBus: '',
 	AluPushFromBus: '',
+	BranchTo: '',
+	JumpWithBusValueRelative: '',
+	AluSetComparisonInvertMode: '',
+	AluSetComparisonMode: '',
+	GetCurrentPosition: '',
+};
+
+export const DslOpcodeParamCounts: {[p in keyof typeof _DslOpcodes]: number} = {
+	GetCurrentPosition: 0,
+	AluSetComparisonMode: 1,
+	AluSetComparisonInvertMode: 1,
+	AluDoComparison: 0,
+	JumpWithBusValueRelative: 0,
+	AluDoAdd: 0,
+	AluHiToBus: 0,
+	AluLoToBus: 0,
+	AluPushFromBus: 0,
+	BranchTo: 1,
+	LoadImmmediateToBus: 1,
+	LoadValueAtAddressIntoBus: 1,
+	LoadWithConstantOffsetToBus: 2,
+	LoadWithVariableOffsetToBus: 2,
+	Noop: 0,
+	SaveFromBusWithConstantOffset: 2,
+	SaveFromBusWithVariableOffset: 2,
+	SaveValueInBusToLocation: 1,
 };
 
 export const DslCodeToComment: SMap<string> = {};
@@ -48,7 +83,7 @@ _.forOwn(_DslOpcodes, (op, key) => {
 const _transformedDslOpcodes = _.mapValues(_DslOpcodes, transformer);
 
 export const DslOpcodes: {
-	[p in keyof typeof _DslOpcodes]: changeParamTypes<typeof _DslOpcodes[p]>;
+	[p in keyof typeof _DslOpcodes]: OpcodeInformation<typeof _DslOpcodes[p]>;
 } = _transformedDslOpcodes as any;
 
 InitializeWindowBarrel('DSLMachine', {

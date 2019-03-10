@@ -12,10 +12,11 @@ import {
 	startGlobalDeclaration,
 	acceptableVarTypes,
 	continueGlobalDeclaration,
-	parseArguments, AsmToMachineCodes, VariableType, getLabel,
+	parseArguments, AsmToMachineCodes, VariableType, getLabel, OpcodeBoundWithData,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { DslCodeToComment } from './dslmachine';
+import { DslCodeToComment, DslOpcodeParamCounts, DslOpcodes } from './dslmachine';
+import { isNullOrWhitespace } from '../stringUtils';
 
 const spaceRegex = / +/g;
 const acceptableVariableRegex = /^[a-zA-Z]\w+$/;
@@ -265,13 +266,13 @@ export class AsmCompiler {
 			// flatten all statements into giant array of callbacks
 			// invoke each callback to generate values
 			// return
-			let codes: (string | number)[] = [0];
+			let codes: (string | number)[] = [];
 
 			this.globalsIndex.forEach((gvd: GlobalVariableDeclaration) => {
 				const comment = `#${gvd.typeName} ${gvd.name}`;
 				const emitted = gvd.emit();
 				if (emitted.length > 0) {
-					gvd.location = codes.length;
+					gvd.location = codes.length + 1;
 					const [head, ... tail] = emitted;
 					codes.push(`${head} ${comment}`);
 					codes = codes.concat(tail);
@@ -280,30 +281,33 @@ export class AsmCompiler {
 				}
 			});
 
-			let expanded: machineOperation[] = [];
-			const commentIndex: SMap<string> = {};
+			// TODO: insert jump point at beginning of program
+
+			let expanded: OpcodeBoundWithData[] = [];
+			let expandedWithParamCount = 0;
+			const comments = makeCommentTracker();
 
 			this.elementIndex.forEach((e: Element) => {
 				if (e instanceof AsmDeclaration) {
-					e.location = expanded.length + codes.length;
-					commentIndex[expanded.length] = e.operations.generatingOperation;
+					e.location = expandedWithParamCount + codes.length;
+					comments.setInstructionComment(expanded.length, e.operations.generatingOperation);
 					expanded = expanded.concat(e.operations.operations);
+					e.operations.operations.forEach((o) => {
+						const count = (DslOpcodeParamCounts as any)[o.info.name];
+						expandedWithParamCount += count + 1;
+					});
 				}
 				else if (e instanceof LabelDeclaration) {
-					e.location = expanded.length + codes.length;
-					commentIndex[expanded.length] = e.name;
-					expanded.push(() => [0]);
+					e.location = expandedWithParamCount + codes.length + 1;
+					comments.setLabelComment(expanded.length, e.name);
 				}
 			});
 
 			expanded.forEach((mOp, index) => {
-				const emitted = mOp();
-				let generatorComment = commentIndex[index];
+				const emitted = mOp.call();
 				let dslCodeComment = DslCodeToComment[emitted[0]];
-				if (generatorComment || dslCodeComment) {
-					const comment = generatorComment ?
-						`${generatorComment} -- ${dslCodeComment || ''}` :
-						dslCodeComment || '';
+				if (dslCodeComment) {
+					const comment = comments.formatComment(index, dslCodeComment);
 					const [head, ... tail] = emitted;
 					codes.push(`${head} # ${comment}`);
 					codes = codes.concat(tail);
@@ -321,6 +325,55 @@ export class AsmCompiler {
 		}
 	};
 
+}
+
+/**
+ * Makes an object that keeps track of comments
+ */
+function makeCommentTracker() {
+
+	interface comment {
+		label: string;
+		instruction: string;
+	}
+
+	const commentIndex: SMap<comment> = {};
+
+	function setLabelComment(index: number, label: string) {
+		if (commentIndex[index]) {
+			commentIndex[index].label = label;
+		}
+		else {
+			commentIndex[index] = {
+				label,
+				instruction: '',
+			};
+		}
+	}
+	function setInstructionComment(index: number, inst: string) {
+		if (commentIndex[index]) {
+			commentIndex[index].instruction = inst;
+		}
+		else {
+			commentIndex[index] = {
+				label: '',
+				instruction: inst,
+			};
+		}
+	}
+	function formatComment(index: number, dslCodeComment: string | undefined): string {
+		const comment = commentIndex[index];
+		if (!comment) return dslCodeComment || '';
+		return [isNullOrWhitespace(comment.label) ? null : `@${comment.label}`, comment.instruction, dslCodeComment]
+			.filter(x => !isNullOrWhitespace(x))
+			.join(' -- ');
+	}
+
+	return {
+		setLabelComment,
+		setInstructionComment,
+		formatComment,
+	};
 }
 
 function doesLineStartNewGlobal(line: string): boolean {

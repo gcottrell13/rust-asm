@@ -1,5 +1,16 @@
 import { DslOpcodes as op } from './dslmachine';
-import { OpcodeFactory, int, getVariableParts, RestFnTo, AsmEmitter, machineOperation, DSLError, AsmToMachineCodes } from './dslaHelpers';
+import {
+	OpcodeFactory,
+	int,
+	mode,
+	getVariableParts,
+	RestFnTo,
+	AsmEmitter,
+	machineOperation,
+	DSLError,
+	AsmToMachineCodes,
+	OpcodeBoundWithData,
+} from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { isNullOrWhitespace } from '../stringUtils';
 import _ from 'lodash';
@@ -10,15 +21,8 @@ export const DslaInstructionRegistration = {
 	add: 'Add',
 	addi: 'Add immediate',
 	loadi: 'Load immediate',
-};
-
-const _dest = 'destination';
-const _source = 'Source';
-const _immediate = 'Immediate';
-export const DslaInstructionParameters: {[p in keyof typeof DslaInstructionRegistration]: string[]} = {
-	add: [_dest, _source, _source],
-	addi: [_dest, _source, _immediate],
-	loadi: [],
+	goto: 'Go to label',
+	beq: 'Branch on equal',
 };
 
 //#region Helpers
@@ -29,9 +33,10 @@ const enforce = (...args: (string | undefined)[]) => {
 	}
 };
 
-type get = (str: string) => machineOperation;
+type get = (str: string) => OpcodeBoundWithData;
+type label = (str: string) => () => number;
 
-function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation {
+function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): OpcodeBoundWithData {
 	const varParts = getVariableParts(variable);
 	if (!varParts) {
 		throw new DSLError(`Could not parse ${variable} to variable expression`);
@@ -43,20 +48,20 @@ function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFn
 
 	if (constantOffset !== null) {
 		// else this variable is a pointer, and add the constant as an offset
-		return op.LoadWithConstantOffsetToBus(d, () => constantOffset);
+		return op.LoadWithConstantOffsetToBus.bind(d, () => constantOffset);
 	}
 	else if (variableOffset !== null) {
 		const [offset] = v(variableOffset);
-		return op.LoadWithVariableOffsetToBus(d, offset);
+		return op.LoadWithVariableOffsetToBus.bind(d, offset);
 	}
 	else {
 		// then we will use this variable directly
-		return op.LoadValueAtAddressIntoBus(d);
+		return op.LoadValueAtAddressIntoBus.bind(d);
 	}
 
 }
 
-function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): machineOperation {
+function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): OpcodeBoundWithData {
 	const varParts = getVariableParts(dest);
 	if (!varParts) {
 		throw new DSLError(`Could not parse ${dest} to variable expression`);
@@ -68,16 +73,21 @@ function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<
 
 	if (constantOffset !== null) {
 		// else this variable is a pointer, and add the constant as an offset
-		return op.SaveFromBusWithConstantOffset(d, () => constantOffset);
+		return op.SaveFromBusWithConstantOffset.bind(d, () => constantOffset);
 	}
 	else if (variableOffset !== null) {
 		const [offset] = v(variableOffset);
-		return op.SaveFromBusWithVariableOffset(d, offset);
+		return op.SaveFromBusWithVariableOffset.bind(d, offset);
 	}
 	else {
 		// then we will use this variable directly
-		return op.SaveValueInBusToLocation(d);
+		return op.SaveValueInBusToLocation.bind(d);
 	}
+}
+
+function GetLabel(label: string, l: RestFnTo<string, () => number>): () => number {
+	const [_l] = l(label);
+	return _l;
 }
 
 //#endregion
@@ -89,23 +99,22 @@ type asmEmitterInternal = (
 	 * the parameters that were supplied
 	 */
 	...parameters: string[]
-) => machineOperation[];
+) => OpcodeBoundWithData[];
 
 type dsla = typeof DslaInstructionRegistration;
 type dslaOpcodes = {
 	[p in keyof dsla]: asmEmitterInternal;
 };
 
-const _opcodes = (Load: get, Save: get): dslaOpcodes => ({
+const _opcodes = (Load: get, Save: get, Label: label): dslaOpcodes => ({
 	add(_dest, _source1, _source2) {
 		enforce(_dest, _source1, _source2);
 		return [
 			Load(_source1),
-			op.AluPushFromBus(),
+			op.AluPushFromBus.bind(),
 			Load(_source2),
-			op.AluPushFromBus(),
-			op.AluDoAdd(),
-			op.AluHiToBus(),
+			op.AluDoAdd.bind(),
+			op.AluHiToBus.bind(),
 			Save(_dest),
 		];
 	},
@@ -114,11 +123,10 @@ const _opcodes = (Load: get, Save: get): dslaOpcodes => ({
 		enforce(_dest, _source, _imm);
 		return [
 			Load(_source),
-			op.AluPushFromBus(),
-			op.LoadImmmediateToBus(int(_imm)),
-			op.AluPushFromBus(),
-			op.AluDoAdd(),
-			op.AluHiToBus(),
+			op.AluPushFromBus.bind(),
+			op.LoadImmmediateToBus.bind(int(_imm)),
+			op.AluDoAdd.bind(),
+			op.AluHiToBus.bind(),
 			Save(_dest),
 		];
 	},
@@ -126,10 +134,32 @@ const _opcodes = (Load: get, Save: get): dslaOpcodes => ({
 	/**
 	 * Load Immediate
 	 */
-	loadi() {
-		return [];
+	loadi(_dest, _imm) {
+		enforce(_dest, _imm);
+		return [
+			op.LoadImmmediateToBus.bind(int(_imm)),
+			Save(_dest),
+		];
 	},
 
+	beq(_source1, _source2, _label) {
+		return [
+			Load(_source1),
+			op.AluPushFromBus.bind(),
+			Load(_source2),
+			op.AluSetComparisonMode.bind(mode(0)),
+			op.AluSetComparisonInvertMode.bind(mode(0)),
+			op.AluDoComparison.bind(),
+			op.BranchTo.bind(Label(_label)),
+		];
+	},
+
+	goto(_label) {
+		return [
+			op.LoadImmmediateToBus.bind(Label(_label)),
+			op.JumpWithBusValueRelative.bind(),
+		];
+	},
 });
 
 // ------------------------------------------------------------------------------------------------
@@ -139,7 +169,8 @@ const _opcodes = (Load: get, Save: get): dslaOpcodes => ({
 export const opcodes: OpcodeFactory = (v, l) => _.mapValues(
 	_opcodes(
 		(s: string) => GetValue(s, v, l),
-		(s: string) => SaveValue(s, v, l)
+		(s: string) => SaveValue(s, v, l),
+		(s: string) => GetLabel(s, l)
 	),
 	(v, key) => (args: string[]) => ({
 		operations: v(...args),
