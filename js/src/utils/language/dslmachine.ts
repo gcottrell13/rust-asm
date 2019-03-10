@@ -8,7 +8,7 @@ export type i = number;
 /**
  * The machine code opcodes
  */
-const _DslOpcodes = {
+export const _DslOpcodes = {
 	Noop: () => [0],
 	LoadValueAtAddressIntoBus: (i: i) => [1, i],
 	SaveValueInBusToLocation: (i: i) => [2, i],

@@ -15,7 +15,7 @@ import {
 	parseArguments, AsmToMachineCodes, VariableType, getLabel, OpcodeBoundWithData,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { DslCodeToComment, DslOpcodeParamCounts, DslOpcodes } from './dslmachine';
+import { _DslOpcodes, DslCodeToComment, DslOpcodeParamCounts, DslOpcodes } from './dslmachine';
 import { isNullOrWhitespace } from '../stringUtils';
 
 const spaceRegex = / +/g;
@@ -282,6 +282,10 @@ export class AsmCompiler {
 			});
 
 			// TODO: insert jump point at beginning of program
+			codes.unshift(
+				... _DslOpcodes.LoadImmmediateToBus(codes.length + 4),
+				... _DslOpcodes.JumpWithBusValueRelative()
+			);
 
 			let expanded: OpcodeBoundWithData[] = [];
 			let expandedWithParamCount = 0;
