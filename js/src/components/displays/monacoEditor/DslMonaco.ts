@@ -1,10 +1,19 @@
 import * as monaco from 'monaco-editor';
-import { languages } from 'monaco-editor';
-import { DslaInstructionRegistration } from '../../../utils/language/dsla';
+import _ from 'lodash';
+import { DslaInstructionParameters, DslaInstructionRegistration } from '../../../utils/language/dsla';
+import { labelRegex } from '../../../utils/language/dslaHelpers';
 
 const instructionEntries = Object.entries(DslaInstructionRegistration);
 
 const dslInstructionToken = 'dsl-instruction';
+
+const instructionSnippets = _.mapValues(DslaInstructionParameters, (params, key) => {
+	const indexes = [1];
+	while (indexes.length < params.length) {
+		indexes.push(indexes.length + 1);
+	}
+	return params.map((p, i) => `$\{${indexes[i]}:${p}}`).join(' ');
+});
 
 //#region Define language
 
@@ -44,8 +53,8 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 
 		// defines the regions for the program
 		regionTokens: [
-			[/^\.data$/, 'keyword', '@dataRegion'],
-			[/^\.text$/, 'keyword', '@textRegion'],
+			[/^\.data$/, { token: 'region', switchTo: '@dataRegion' }],
+			[/^\.text$/, { token: 'region', switchTo: '@textRegion' }],
 		],
 
 		// defines the data region
@@ -62,13 +71,14 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 			[/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-teminated string
 			[/"/, 'string', '@string_double'],
 
-			[/[:=]/, ''],
-			['.text', { token: 'keyword', switchTo: '@textRegion' }],
+			{ include: '@regionTokens' },
 		],
 
 		// defines the text region
 		textRegion: [
 			{ include: '@whitespace' },
+
+			[labelRegex, 'label'],
 
 			// instructions
 			[/^[a-zA-Z_$][a-zA-Z_$\d]*/, {
@@ -83,7 +93,7 @@ monaco.languages.setMonarchTokensProvider('dsla', {
 			{ include: '@varNames' },
 			{ include: '@numbers' },
 
-			['.data', { token: 'keyword', switchTo: '@dataRegion' }],
+			{ include: '@regionTokens' },
 		],
 
 		// sub-sections
@@ -122,9 +132,11 @@ monaco.editor.defineTheme('dsla', {
 		// { token: 'custom-error', foreground: 'ff0000', fontStyle: 'bold' },
 		// { token: 'custom-notice', foreground: 'FFA500' },
 		// { token: 'custom-date', foreground: '008800' },
-		{ token: dslInstructionToken, foreground: '808080' },
-		{ token: 'identifier', foreground: 'FFA500' },
-		{ token: 'invalid', foreground: '000000', background: 'FF0000' },
+		{ token: 'region', foreground: '008800', fontStyle: 'italic bold' },
+		{ token: dslInstructionToken, foreground: '808080', fontStyle: 'bold' },
+		{ token: 'label', foreground: '000088', fontStyle: 'bold' },
+		{ token: 'identifier', foreground: '000000' },
+		{ token: 'invalid', foreground: 'ff0000', background: 'FF0000' },
 	],
 	colors: {},
 	encodedTokensColors: [],
@@ -189,31 +201,46 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 		suggestions = suggestions.concat(
 			{
 				label: 'var',
-				kind: languages.CompletionItemKind.Keyword,
+				kind: monaco.languages.CompletionItemKind.Keyword,
 				insertText: 'var',
 			},
 			{
 				label: 'string',
-				kind: languages.CompletionItemKind.Class,
+				kind: monaco.languages.CompletionItemKind.Class,
 				insertText: 'string',
 			},
 			{
 				label: 'number',
-				kind: languages.CompletionItemKind.Class,
+				kind: monaco.languages.CompletionItemKind.Class,
 				insertText: 'number',
 			},
 			{
 				label: 'array',
-				kind: languages.CompletionItemKind.Class,
+				kind: monaco.languages.CompletionItemKind.Class,
 				insertText: 'array',
 			});
 	}
 
 	else if (region === 'text') {
 		suggestions = getRegionSuggestion(currentLine, 'data');
-		// TODO
-		const currentInstruction = instructionEntries
-			.find(([key, comment]) => currentLine.startsWith(key));
+		const currentInstructions = instructionEntries
+			.filter(([key, comment]) => key.startsWith(currentLine));
+		if (currentInstructions.length > 0) {
+			suggestions = suggestions.concat(currentInstructions
+				.map(([x, comment]) => {
+					return {
+						label: x,
+						kind: monaco.languages.CompletionItemKind.Function,
+						insertText: `${x} ${instructionSnippets[x]}`,
+						insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+						documentation: comment,
+					};
+				}));
+		}
+		else {
+
+			// TODO get all variable names
+		}
 	}
 
 

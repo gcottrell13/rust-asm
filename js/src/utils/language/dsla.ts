@@ -12,6 +12,15 @@ export const DslaInstructionRegistration = {
 	loadi: 'Load immediate',
 };
 
+const _dest = 'destination';
+const _source = 'Source';
+const _immediate = 'Immediate';
+export const DslaInstructionParameters: {[p in keyof typeof DslaInstructionRegistration]: string[]} = {
+	add: [_dest, _source, _source],
+	addi: [_dest, _source, _immediate],
+	loadi: [],
+};
+
 //#region Helpers
 
 const enforce = (...args: (string | undefined)[]) => {
