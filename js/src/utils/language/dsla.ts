@@ -141,9 +141,9 @@ export const opcodes: OpcodeFactory = (v, l) => _.mapValues(
 		(s: string) => GetValue(s, v, l),
 		(s: string) => SaveValue(s, v, l)
 	),
-	v => (args: string[]) => ({
+	(v, key) => (args: string[]) => ({
 		operations: v(...args),
-		generatingOperation: args.join(' '),
+		generatingOperation: key + ' ' + args.join(' '),
 	})
 );
 

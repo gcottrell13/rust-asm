@@ -569,29 +569,25 @@ impl Processor {
 	}
 
 	fn load_with_constant_offset_to_bus(&mut self, p1: location, p2: storage) {
-		let ptr = self._get_memory_loc(p1);
-		let val = self._get_memory_loc(ptr + p2);
+		let val = self._get_memory_loc(p1 + p2);
 		self.bus = val;
 	}
 
 	fn load_with_variable_offset_to_bus(&mut self, p1: location, p2: location) {
-		let ptr = self._get_memory_loc(p1);
 		let offset = self._get_memory_loc(p2);
-		let val = self._get_memory_loc(ptr + offset);
+		let val = self._get_memory_loc(p1 + offset);
 		self.bus = val;
 	}
 
 	fn save_with_constant_offset_from_bus(&mut self, p1: location, p2: storage) {
-		let ptr = self._get_memory_loc(p1);
 		let value = self.bus;
-		self._set_memory_loc(ptr + p2, value);
+		self._set_memory_loc(p1 + p2, value);
 	}
 	
 	fn save_with_variable_offset_from_bus(&mut self, p1: location, p2: location) {
-		let ptr = self._get_memory_loc(p1);
 		let offset = self._get_memory_loc(p2);
 		let value = self.bus;
-		self._set_memory_loc(ptr + offset, value);
+		self._set_memory_loc(p1 + offset, value);
 	}
 
 	// opcode 20

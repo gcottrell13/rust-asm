@@ -15,6 +15,7 @@ import {
 	parseArguments, AsmToMachineCodes, VariableType, getLabel,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
+import { DslCodeToComment } from './dslmachine';
 
 const spaceRegex = / +/g;
 const acceptableVariableRegex = /^[a-zA-Z]\w+$/;
@@ -30,6 +31,10 @@ abstract class Element {
 
 	get location() {
 		return this._location;
+	}
+
+	set location(value: number) {
+		this._location = value;
 	}
 
 	abstract emit(): number[];
@@ -130,9 +135,9 @@ export class AsmCompiler {
 			throw new DSLError(`Already have a label '${str}'`);
 		}
 		else {
-			const l = new LabelDeclaration(this.getNextElementIndex(), str);
-			this.insertElement(l);
-			this.labels[str] = l;
+			const label = new LabelDeclaration(this.getNextElementIndex(), str);
+			this.insertElement(label);
+			this.labels[str] = label;
 		}
 	}
 
@@ -260,17 +265,51 @@ export class AsmCompiler {
 			// flatten all statements into giant array of callbacks
 			// invoke each callback to generate values
 			// return
-			let codes: (string | number)[] = [];
+			let codes: (string | number)[] = [0];
 
 			this.globalsIndex.forEach((gvd: GlobalVariableDeclaration) => {
 				const comment = `#${gvd.typeName} ${gvd.name}`;
 				const emitted = gvd.emit();
 				if (emitted.length > 0) {
+					gvd.location = codes.length;
 					const [head, ... tail] = emitted;
 					codes.push(`${head} ${comment}`);
 					codes = codes.concat(tail);
 					if (gvd.typeName === VariableType.Array)
 						codes.push(`0 #end ${gvd.name}`);
+				}
+			});
+
+			let expanded: machineOperation[] = [];
+			const commentIndex: SMap<string> = {};
+
+			this.elementIndex.forEach((e: Element) => {
+				if (e instanceof AsmDeclaration) {
+					e.location = expanded.length + codes.length;
+					commentIndex[expanded.length] = e.operations.generatingOperation;
+					expanded = expanded.concat(e.operations.operations);
+				}
+				else if (e instanceof LabelDeclaration) {
+					e.location = expanded.length + codes.length;
+					commentIndex[expanded.length] = e.name;
+					expanded.push(() => [0]);
+				}
+			});
+
+			expanded.forEach((mOp, index) => {
+				const emitted = mOp();
+				let generatorComment = commentIndex[index];
+				let dslCodeComment = DslCodeToComment[emitted[0]];
+				if (generatorComment || dslCodeComment) {
+					const comment = generatorComment ?
+						`${generatorComment} -- ${dslCodeComment || ''}` :
+						dslCodeComment || '';
+					const [head, ... tail] = emitted;
+					codes.push(`${head} # ${comment}`);
+					codes = codes.concat(tail);
+				}
+				else {
+					codes.push(... emitted);
 				}
 			});
 
