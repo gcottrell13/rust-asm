@@ -420,6 +420,18 @@ impl Processor {
 				let mode = self.getParam();
 				self.alu_compare_with_mode(mode);
 			},
+			30 => {
+				self.or();
+			},
+			31 => {
+				self.and();
+			},
+			32 => {
+				self.shift_left();
+			},
+			33 => {
+				self.shift_right();
+			},
 			_ => {
 				stopCode = StopCode::Halt;
 				self.status = ProcessorStatus::Halted;
@@ -498,6 +510,26 @@ impl Processor {
 	fn divide(&mut self) {
 		self.push_to_alu();
 		self.alu.divide();
+	}
+
+	fn or(&mut self) {
+		self.push_to_alu();
+		self.alu.bitwise_or();
+	}
+
+	fn and(&mut self) {
+		self.push_to_alu();
+		self.alu.bitwise_and();
+	}
+
+	fn shift_left(&mut self) {
+		self.push_to_alu();
+		self.alu.shift_left();
+	}
+
+	fn shift_right(&mut self) {
+		self.push_to_alu();
+		self.alu.shift_right();
 	}
 
 	fn alu_compare_with_mode(&mut self, value: storage) {
@@ -842,6 +874,21 @@ impl ALU {
 		}
 	}
 
+	fn bitwise_or(&mut self) {
+		self.value_a_int = self.value_a_int | self.value_b_int;
+	}
+
+	fn bitwise_and(&mut self) {
+		self.value_a_int = self.value_a_int & self.value_b_int;
+	}
+
+	fn shift_left(&mut self) {
+		self.value_a_int = self.value_a_int << self.value_b_int;
+	}
+
+	fn shift_right(&mut self) {
+		self.value_a_int = self.value_a_int >> self.value_b_int;
+	}
 
 	fn push_int(&mut self, value: i32) {
 		self.value_b_int = self.value_a_int;

@@ -69,6 +69,14 @@ export const _DslOpcodes = {
 
 	AluDoComparisonWithMode: (mode: i) => [29, mode],
 
+	Or: () => [30],
+
+	And: () => [31],
+
+	ShiftLeft: () => [32],
+
+	ShiftRight: () => [33],
+
 	Halt: () => [100],
 };
 
