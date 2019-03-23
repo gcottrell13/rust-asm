@@ -289,7 +289,6 @@ impl Processor {
 
 		//	13	jump -> goto current + parameter as int
 		//	14	jump bus > 0 -> goto current + parameter as int
-		//	15	jump bus is 0 -> goto current + parameter as int
 
 		//	16	ALU.hi -> bus
 		//	17	ALU.lo -> bus
@@ -345,9 +344,6 @@ impl Processor {
 			9 => {
 				self.add();
 			},
-			10 => {
-				self.negate();
-			},
 			11 => {
 				self.multiply();
 			},
@@ -361,12 +357,15 @@ impl Processor {
 			},
 			14 => {
 				let param = self.getParam();
-				match self.alu.compare_result {
-					true => {
-						self.dontMoveParamPointer();
-						self.jump(param);
-					},
-					false => {},
+				if self.alu.compare_result {
+					self.dontMoveParamPointer();
+					self.jump(param);
+				}
+			},
+			15 => {
+				// link if compare == true
+				if self.alu.compare_result {
+					self.bus = n;
 				}
 			},
 			16 => {
@@ -389,10 +388,6 @@ impl Processor {
 				let param = self.getParam();
 				// syscall
 				self.syscall(param);
-			},
-			22 => {
-				stopCode = StopCode::Halt;
-				self.status = ProcessorStatus::Halted;
 			},
 			23 => {
 				stopCode = StopCode::Pause;
@@ -423,7 +418,7 @@ impl Processor {
 			},
 			29 => {
 				let mode = self.getParam();
-				self.switch_alu_compare_mode(mode);
+				self.alu_compare_with_mode(mode);
 			},
 			_ => {
 				stopCode = StopCode::Halt;
@@ -493,12 +488,6 @@ impl Processor {
 		self.alu.add();
 	}
 
-	// opcode 7
-	fn negate(&mut self) {
-		self.push_to_alu();
-		self.alu.negate();
-	}
-
 	// opcode 8
 	fn multiply(&mut self) {
 		self.push_to_alu();
@@ -511,7 +500,7 @@ impl Processor {
 		self.alu.divide();
 	}
 
-	fn switch_alu_compare_mode(&mut self, value: storage) {
+	fn alu_compare_with_mode(&mut self, value: storage) {
 		match value {
 			0 => {
 				self.alu.compare_mode = ALUCompareMode::equal;
@@ -832,13 +821,6 @@ impl ALU {
 		}
 	}
 
-	fn negate(&mut self) {
-		match self.mode {
-			ALUMode::int => self.negate_int(),
-			ALUMode::float => self.negate_float(),
-		}
-	}
-
 	fn multiply(&mut self) {
 		match self.mode {
 			ALUMode::int => self.multiply_int(),
@@ -880,14 +862,6 @@ impl ALU {
 	fn add_float(&mut self) {
 		self.hi = (self.value_a_float + self.value_b_float).to_bits();
 		self.lo = 0;
-	}
-
-	fn negate_int(&mut self) {
-	}
-
-	fn negate_float(&mut self) {
-		// self.hi = -self.value_a;
-		// self.lo = 0;
 	}
 
 	fn multiply_int(&mut self) {
