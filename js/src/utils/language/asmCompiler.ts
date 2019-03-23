@@ -308,7 +308,7 @@ export class AsmCompiler {
 					if (cache === undefined) {
 						cache = 0;
 						e.operations.operations.forEach((o) => {
-							const count = (DslOpcodeParamCounts as any)[o.info.name];
+							const count = DslOpcodeParamCounts[o.info.name];
 							cache += count + 1;
 						});
 						paramCountCache[e.operations.generatingOperation] = cache;
