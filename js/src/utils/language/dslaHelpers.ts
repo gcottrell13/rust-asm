@@ -35,13 +35,15 @@ export type argsAndReturnToFunctions<T> =
 		() => () => [];
 
 export function transformer<Inputs extends number[]>(func: (...args: Inputs) => number[]): InstructionInformation<(... args: Inputs) => number[]> {
-	function info(...args: argsToFunctions<typeof func>) {
-		return {
-			call: () => func(...args.map(a => a()) as any),
-			info,
-		};
-	}
-	return info as any;
+	const info = {
+		[func.name](...args: argsToFunctions<typeof func>) {
+			return {
+				call: () => func(...args.map(a => a()) as any),
+				info: info[func.name],
+			};
+		},
+	};
+	return info[func.name] as any;
 }
 
 export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(...items: T) => mapParts<T, ReturnType>;
