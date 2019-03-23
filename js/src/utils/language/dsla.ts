@@ -29,19 +29,6 @@ type dslaInstructions = {
 	[p in keyof dsla]: asmEmitterInternal;
 };
 
-// DSL-Assembly
-
-export const DslaInstructionRegistration = {
-	add: 'Add',
-	addi: 'Add immediate',
-	loadi: 'Load immediate',
-	goto: 'Go to label',
-	beq: 'Branch on equal',
-	halt: 'Halt program',
-	beqal: 'Branch on equal and make current available on bus',
-	captureLink: 'Capture bus to a location',
-};
-
 //#region Helpers
 
 const enforce = (args: string[], callee: Function) => {
@@ -121,6 +108,21 @@ function GetLabel(label: string, l: RestFnTo<string, () => number>): () => numbe
 }
 
 //#endregion
+
+// DSL-Assembly
+
+export const DslaInstructionRegistration = {
+	add: 'Add',
+	addi: 'Add immediate',
+	loadi: 'Load immediate',
+	goto: 'Go to label',
+	beq: 'Branch on equal',
+	halt: 'Halt program',
+	beqal: 'Branch on equal and make current available on bus',
+	gotol: 'Jump and link',
+	captureLink: 'Capture bus to a location',
+	ret: 'Return to a specified location',
+};
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
