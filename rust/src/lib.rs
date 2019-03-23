@@ -873,7 +873,7 @@ impl ALU {
 
 
 	fn add_int(&mut self) {
-		self.hi = (self.value_a_int + self.value_b_int) as u32;
+		self.hi = self.value_a_int.wrapping_add(self.value_b_int) as u32;
 		self.lo = 0;
 	}
 
@@ -914,19 +914,15 @@ impl ALU {
 	}
 
 	fn divide_int(&mut self) {
-		self.hi = i32_to_bits(self.value_a_int / self.value_b_int);
-		self.lo = 0;
+		self.lo = i32_to_bits(self.value_a_int / self.value_b_int);
+		self.hi = i32_to_bits(self.value_a_int % self.value_b_int);
 	}
 
 	fn divide_float(&mut self) {
-		let value: f64 = (self.value_a_float / self.value_b_float).into();
+		let value = self.value_a_float / self.value_b_float;
 		let bits = value.to_bits();
-
-		let loMask = 0x00000000ffffffff;
-		let hiMask = 0xffffffff00000000;
-
-		self.hi = ((hiMask & bits) >> 32) as u32;
-		self.lo = (loMask & bits) as u32;
+		self.lo = bits;
+		self.hi = 0;
 	}
 
 	fn cmp_int(&mut self) {
