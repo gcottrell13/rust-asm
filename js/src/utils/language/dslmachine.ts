@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { transformer, argsAndReturnToFunctions, OpcodeInformation } from './dslaHelpers';
+import { transformer, argsAndReturnToFunctions, InstructionInformation } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
 
@@ -114,7 +114,7 @@ _.forOwn(_DslOpcodes, (op, key) => {
 const _transformedDslOpcodes = _.mapValues(_DslOpcodes, transformer);
 
 export const DslOpcodes: {
-	[p in keyof typeof _DslOpcodes]: OpcodeInformation<typeof _DslOpcodes[p]>;
+	[p in keyof typeof _DslOpcodes]: InstructionInformation<typeof _DslOpcodes[p]>;
 } = _transformedDslOpcodes as any;
 
 InitializeWindowBarrel('DSLMachine', {

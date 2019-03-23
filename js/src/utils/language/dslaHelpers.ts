@@ -10,20 +10,19 @@ type mapParts<T, to> = {
 	[P in keyof T]: to;
 };
 
-type opcodeInfoBindType<T> =
+type instructionInfoBindType<T> =
 	T extends (... args: number[]) => number[] ?
-		(... args: argsToFunctions<T>) => OpcodeBoundWithData
+		(... args: argsToFunctions<T>) => InstructionBoundWithData
 	: unknown;
 
-export type OpcodeInformation<T> = opcodeInfoBindType<T> & {
-	// bind: opcodeInfoBindType<T>;
+export type InstructionInformation<T> = instructionInfoBindType<T> & {
 	// call: argsAndReturnToFunctions<T>;
 	name: string;
 };
 
-export interface OpcodeBoundWithData {
+export interface InstructionBoundWithData {
 	call: () => number[];
-	info: OpcodeInformation<any>;
+	info: InstructionInformation<any>;
 }
 
 type argsToFunctions<T> =
@@ -35,7 +34,7 @@ export type argsAndReturnToFunctions<T> =
 	(...args: keysToFunctions<InputTuple>) => () => R :
 		() => () => [];
 
-export function transformer<Inputs extends number[]>(func: (...args: Inputs) => number[]): OpcodeInformation<(... args: Inputs) => number[]> {
+export function transformer<Inputs extends number[]>(func: (...args: Inputs) => number[]): InstructionInformation<(... args: Inputs) => number[]> {
 	function info(...args: argsToFunctions<typeof func>) {
 		return {
 			call: () => func(...args.map(a => a()) as any),
@@ -78,8 +77,8 @@ export function mode(i: number): () => number {
 
 export type machineOperation = () => number[];
 export interface AsmToMachineCodes {
-	operations: OpcodeBoundWithData[];
-	generatingOperation: string;
+	opcodes: InstructionBoundWithData[];
+	generatingInstruction: string;
 }
 
 
@@ -89,18 +88,6 @@ export interface AsmToMachineCodes {
 export type AsmEmitter = (
 	parameters: string[]
 ) => AsmToMachineCodes;
-
-export const assemblerDirectives = {
-	'.text'() {
-
-	},
-
-	'.data'() {
-
-	},
-
-
-};
 
 /**
  *

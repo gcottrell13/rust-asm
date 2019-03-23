@@ -12,7 +12,7 @@ import {
 	startGlobalDeclaration,
 	acceptableVarTypes,
 	continueGlobalDeclaration,
-	parseArguments, AsmToMachineCodes, VariableType, getLabel, OpcodeBoundWithData,
+	parseArguments, AsmToMachineCodes, VariableType, getLabel, InstructionBoundWithData,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { _DslOpcodes, DslCodeToComment, DslOpcodeParamCounts } from './dslmachine';
@@ -292,7 +292,7 @@ export class AsmCompiler {
 				... _DslOpcodes.JumpWithBusValueRelative()
 			);
 
-			let expanded: OpcodeBoundWithData[] = [];
+			let expanded: InstructionBoundWithData[] = [];
 			let expandedWithParamCount = 0;
 			const paramCountCache: SMap<number> = {};
 			const comments = makeCommentTracker();
@@ -300,14 +300,14 @@ export class AsmCompiler {
 			this.elementIndex.forEach((e: Element) => {
 				if (e instanceof AsmDeclaration) {
 					e.location = expandedWithParamCount + codes.length;
-					comments.setInstructionComment(expanded.length, e.operations.generatingOperation);
-					expanded = expanded.concat(e.operations.operations);
+					comments.setInstructionComment(expanded.length, e.operations.generatingInstruction);
+					expanded = expanded.concat(e.operations.opcodes);
 
 					// count actual memory spaces taken up by this instruction
 					let cache = paramCountCache[e.operations.generatingOperation];
 					if (cache === undefined) {
 						cache = 0;
-						e.operations.operations.forEach((o) => {
+						e.operations.opcodes.forEach((o) => {
 							const count = DslOpcodeParamCounts[o.info.name];
 							cache += count + 1;
 						});

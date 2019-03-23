@@ -9,7 +9,7 @@ import {
 	machineOperation,
 	DSLError,
 	AsmToMachineCodes,
-	OpcodeBoundWithData, argsAndReturnToFunctions,
+	InstructionBoundWithData, argsAndReturnToFunctions,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { isNullOrWhitespace } from '../stringUtils';
@@ -22,10 +22,10 @@ type asmEmitterInternal = (
 	 * the parameters that were supplied
 	 */
 	...parameters: string[]
-) => OpcodeBoundWithData[];
+) => InstructionBoundWithData[];
 
 type dsla = typeof DslaInstructionRegistration;
-type dslaOpcodes = {
+type dslaInstructions = {
 	[p in keyof dsla]: asmEmitterInternal;
 };
 
@@ -63,10 +63,10 @@ const enforce = (args: string[], callee: Function) => {
 	}
 };
 
-type get = (str: string) => OpcodeBoundWithData;
+type get = (str: string) => InstructionBoundWithData;
 type label = (str: string) => () => number;
 
-function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): OpcodeBoundWithData {
+function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): InstructionBoundWithData {
 	const varParts = getVariableParts(variable);
 	if (!varParts) {
 		throw new DSLError(`Could not parse ${variable} to variable expression`);
@@ -91,7 +91,7 @@ function GetValue(variable: string, v: RestFnTo<string, () => number>, l: RestFn
 
 }
 
-function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): OpcodeBoundWithData {
+function SaveValue(dest: string, v: RestFnTo<string, () => number>, l: RestFnTo<string, () => number>): InstructionBoundWithData {
 	const varParts = getVariableParts(dest);
 	if (!varParts) {
 		throw new DSLError(`Could not parse ${dest} to variable expression`);
@@ -125,7 +125,7 @@ function GetLabel(label: string, l: RestFnTo<string, () => number>): () => numbe
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
-const _instructions = (Load: get, Save: get, Label: label): dslaOpcodes => ({
+const _instructions = (Load: get, Save: get, Label: label): dslaInstructions => ({
 	add(_dest, _source1, _source2) {
 		return [
 			Load(_source1),
@@ -209,8 +209,8 @@ export const instructions: InstructionFactory = (variableGet, labelGet) => _.map
 	(instructionFunc, instructionName) => (args: string[]) => {
 		enforce(args, instructionFunc);
 		return {
-			operations: instructionFunc(...args),
-			generatingOperation: instructionName + ' ' + args.join(' '),
+			opcodes: instructionFunc(...args),
+			generatingInstruction: instructionName + ' ' + args.join(' '),
 		};
 	}
 );
