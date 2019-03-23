@@ -79,6 +79,7 @@ export type machineOperation = () => number[];
 export interface AsmToMachineCodes {
 	opcodes: InstructionBoundWithData[];
 	generatingInstruction: string;
+	instructionName: string;
 }
 
 

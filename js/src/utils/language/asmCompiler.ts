@@ -304,14 +304,14 @@ export class AsmCompiler {
 					expanded = expanded.concat(e.operations.opcodes);
 
 					// count actual memory spaces taken up by this instruction
-					let cache = paramCountCache[e.operations.generatingOperation];
+					let cache = paramCountCache[e.operations.instructionName];
 					if (cache === undefined) {
 						cache = 0;
 						e.operations.opcodes.forEach((o) => {
 							const count = DslOpcodeParamCounts[o.info.name];
 							cache += count + 1;
 						});
-						paramCountCache[e.operations.generatingOperation] = cache;
+						paramCountCache[e.operations.instructionName] = cache;
 					}
 
 					expandedWithParamCount += cache;

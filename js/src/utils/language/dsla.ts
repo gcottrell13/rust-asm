@@ -211,6 +211,7 @@ export const instructions: InstructionFactory = (variableGet, labelGet) => _.map
 		return {
 			opcodes: instructionFunc(...args),
 			generatingInstruction: instructionName + ' ' + args.join(' '),
+			instructionName,
 		};
 	}
 );
