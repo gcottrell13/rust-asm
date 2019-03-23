@@ -282,7 +282,7 @@ export class AsmCompiler {
 					codes.push(`${head} ${comment}`);
 					codes = codes.concat(tail);
 					if (gvd.typeName === VariableType.Array)
-						codes.push(`0 #end ${gvd.name}`);
+						codes.push(`0 # null terminate ${gvd.name}`);
 				}
 			});
 
