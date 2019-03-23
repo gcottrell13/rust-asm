@@ -185,9 +185,24 @@ const _instructions = (Load: get, Save: get, Label: label): dslaInstructions => 
 		];
 	},
 
+	gotol(_label) {
+		return [
+			op.LoadImmmediateToBus(Label(_label)),
+			op.JumpWithBusValueRelative(),
+			op.GetCurrentPosition(),
+		];
+	},
+
 	captureLink(_linkDestination) {
 		return [
 			Save(_linkDestination),
+		];
+	},
+
+	ret(_sourceVar) {
+		return [
+			Load(_sourceVar),
+			op.JumpWithBusValueRelative(),
 		];
 	},
 
