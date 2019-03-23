@@ -15,11 +15,11 @@ type opcodeInfoBindType<T> =
 		(... args: argsToFunctions<T>) => OpcodeBoundWithData
 	: unknown;
 
-export interface OpcodeInformation<T> {
-	bind: opcodeInfoBindType<T>;
+export type OpcodeInformation<T> = opcodeInfoBindType<T> & {
+	// bind: opcodeInfoBindType<T>;
 	// call: argsAndReturnToFunctions<T>;
 	name: string;
-}
+};
 
 export interface OpcodeBoundWithData {
 	call: () => number[];
@@ -36,19 +36,18 @@ export type argsAndReturnToFunctions<T> =
 		() => () => [];
 
 export function transformer<Inputs extends number[]>(func: (...args: Inputs) => number[]): OpcodeInformation<(... args: Inputs) => number[]> {
-	const info = {
-		bind: (...args: argsToFunctions<typeof func>) => ({
+	function info(...args: argsToFunctions<typeof func>) {
+		return {
 			call: () => func(...args.map(a => a()) as any),
 			info,
-		}),
-		name: func.name,
-	};
+		};
+	}
 	return info as any;
 }
 
 export type RestFnTo<ArrItem, ReturnType> = <T extends ArrItem[]>(...items: T) => mapParts<T, ReturnType>;
 
-export type OpcodeFactory = (
+export type InstructionFactory = (
 	/**
 	 * Returns the location of variables
 	 */

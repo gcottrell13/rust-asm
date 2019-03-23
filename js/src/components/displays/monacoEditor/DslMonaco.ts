@@ -1,36 +1,14 @@
 import * as monaco from 'monaco-editor';
 import _ from 'lodash';
-import { DslaInstructionRegistration } from '../../../utils/language/dsla';
+import { DslaInstructionRegistration, instructionSignatures } from '../../../utils/language/dsla';
 import { labelRegex } from '../../../utils/language/dslaHelpers';
 import { isNullOrWhitespace, stringHasContent } from '../../../utils/stringUtils';
-
-const params = {
-	destination: 'Destination',
-	source: 'Source',
-	immediate: 'Immediate',
-	label: 'Label',
-};
-
-const DslaInstructionParameters: {[p in keyof typeof DslaInstructionRegistration]: string[]} = {
-	add: [params.destination, params.source, params.source],
-	addi: [params.destination, params.source, params.immediate],
-	loadi: [params.destination, params.immediate],
-	goto: [params.label],
-	beq: [params.source, params.source, params.label],
-	halt: [],
-};
 
 const instructionEntries = Object.entries(DslaInstructionRegistration);
 
 const dslInstructionToken = 'dsl-instruction';
 
-const instructionSnippets = _.mapValues(DslaInstructionParameters, (params, key) => {
-	const indexes = [1];
-	while (indexes.length < params.length) {
-		indexes.push(indexes.length + 1);
-	}
-	return params.map((p, i) => `$${p}`).join(' ');
-});
+const instructionSnippets = _.mapValues(instructionSignatures, params => params.join(' '));
 
 //#region Define language
 
@@ -218,7 +196,6 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 
 	if (region === null) {
 		suggestions = getRegionSuggestion(currentLine, 'data', 'text');
-		console.log('region null', suggestions);
 	}
 
 	else if (region === 'data') {
@@ -281,58 +258,5 @@ function getCurrentContext(model: monaco.editor.ITextModel, position: monaco.Pos
 monaco.languages.registerCompletionItemProvider('dsla', {
 	provideCompletionItems: (model, position) => {
 		return getCurrentContext(model, position);
-		//
-		// const line = model.getLineContent(position.lineNumber);
-		//
-		//
-		// if (line.startsWith('.')) {
-		// 	// either .data or .text
-		// 	return {
-		// 		suggestions: ['.data', '.text']
-		// 			.filter(x => x.startsWith(line))
-		// 			.map(x => ({
-		// 				label: x,
-		// 				kind: monaco.languages.CompletionItemKind.Keyword,
-		// 				insertText: x + '\n',
-		// 			})),
-		// 	};
-		// }
-		//
-		// if (line.startsWith('#')) {
-		// 	return { suggestions: [] };
-		// }
-		//
-		// const suggestions = instructionEntries
-		// 	.map(([key, comment]) => ({
-		// 		label: key,
-		// 		kind: monaco.languages.CompletionItemKind.Function,
-		// 		insertText: key,
-		// 		documentation: comment,
-		// 	}));
-		//
-		//
-		// // var suggestions = [{
-		// // 	label: 'simpleText',
-		// // 	kind: monaco.languages.CompletionItemKind.Text,
-		// // 	insertText: 'simpleText',
-		// // }, {
-		// // 	label: 'testing',
-		// // 	kind: monaco.languages.CompletionItemKind.Keyword,
-		// // 	insertText: 'testing(${1:condition})',
-		// // 	insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-		// // }, {
-		// // 	label: 'ifelse',
-		// // 	kind: monaco.languages.CompletionItemKind.Snippet,
-		// // 	insertText: [
-		// // 		'if (${1:condition}) {',
-		// // 		'\t$0',
-		// // 		'} else {',
-		// // 		'\t',
-		// // 		'}',
-		// // 	].join('\n'),
-		// // 	insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-		// // 	documentation: 'If-Else Statement',
-		// // }];
-		// return { suggestions };
 	},
 });

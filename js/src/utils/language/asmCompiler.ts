@@ -1,7 +1,7 @@
 import { SMap } from '../utilTypes';
 import {
 	AsmEmitter,
-	OpcodeFactory,
+	InstructionFactory,
 	isLabel,
 	isComment,
 	DSLError,
@@ -15,7 +15,7 @@ import {
 	parseArguments, AsmToMachineCodes, VariableType, getLabel, OpcodeBoundWithData,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { _DslOpcodes, DslCodeToComment, DslOpcodeParamCounts, DslOpcodes } from './dslmachine';
+import { _DslOpcodes, DslCodeToComment, DslOpcodeParamCounts } from './dslmachine';
 import { isNullOrWhitespace } from '../stringUtils';
 
 const spaceRegex = / +/g;
@@ -91,18 +91,18 @@ export class AsmCompiler {
 	// [varname] = variable information;
 	private readonly variables: SMap<GlobalVariableDeclaration>;
 	private readonly labels: SMap<LabelDeclaration>;
-	private readonly opcodes: SMap<AsmEmitter>;
+	private readonly instructions: SMap<AsmEmitter>;
 
 	private readonly elementIndex: Element[];
 
 	private readonly globalsIndex: GlobalVariableDeclaration[];
 
-	constructor(opcodes: OpcodeFactory) {
+	constructor(instructions: InstructionFactory) {
 		this.variables = {};
 		this.labels = {};
 		this.elementIndex = [];
 		this.globalsIndex = [];
-		this.opcodes = opcodes(this.varGetter, this.labelGetter);
+		this.instructions = instructions(this.varGetter, this.labelGetter);
 	}
 
 	private varGetter = (...strings: string[]): any => {
@@ -247,14 +247,14 @@ export class AsmCompiler {
 
 			//#region Other Statements
 			else {
-				if (!(first in this.opcodes)) {
+				if (!(first in this.instructions)) {
 					throw new DSLError(`Invalid operation: ${first}`);
 				}
 
 				const restString = rest.join(' ');
 				const args = parseArguments(restString);
 
-				const opcode = this.opcodes[first];
+				const opcode = this.instructions[first];
 				const r = opcode(args);
 				this.makeAsmStatement(first, r);
 			}
@@ -263,7 +263,7 @@ export class AsmCompiler {
 
 		});
 
-		this.makeAsmStatement('halt', this.opcodes['halt']([]));
+		this.makeAsmStatement('halt', this.instructions['halt']([]));
 
 		if (errors.length === 0) {
 

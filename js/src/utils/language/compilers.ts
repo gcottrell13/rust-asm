@@ -1,6 +1,6 @@
 import { toInt } from '../generalUtils';
 import { AsmCompiler } from './asmCompiler';
-import { opcodes } from './dsla';
+import { instructions } from './dsla';
 
 export function dsl2machine(text: string): number[] {
 	return text.split('\n').map(toInt).map(n => isNaN(n) ? 0 : n);
@@ -8,7 +8,7 @@ export function dsl2machine(text: string): number[] {
 
 export function asm2dsl(text: string): string {
 
-	const compiler = new AsmCompiler(opcodes);
+	const compiler = new AsmCompiler(instructions);
 
 	return compiler.emit(text.split(/\n/g));
 }
