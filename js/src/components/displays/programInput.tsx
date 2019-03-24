@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Well, FormControl, Button } from 'react-bootstrap';
 import { FilePicker } from '../form/filePicker';
+import { useGlobalDslWasmState } from '../../state/globalState';
 
 export interface ProgramInputProps {
 	onLoad: (text: string) => void;
 }
 
-export function ProgramInput(props: ProgramInputProps) {
-	const [programText, setText] = useState('');
+export function ProgramInput({ onLoad }: ProgramInputProps) {
+	const [globalCompiledText] = useGlobalDslWasmState('dslCompiled');
+	const [programText, setText] = useState(globalCompiledText);
+	useEffect(
+		() => {
+			setText(globalCompiledText);
+		},
+		[globalCompiledText]
+	);
 
 	return (
 		<div className={'input-container'}>
@@ -17,7 +25,7 @@ export function ProgramInput(props: ProgramInputProps) {
 			{
 				programText !== '' ? (
 					<Button
-						onClick={() => props.onLoad(programText)}
+						onClick={() => onLoad(programText)}
 						className={'load-button'}
 						id={'load-button'}
 					>

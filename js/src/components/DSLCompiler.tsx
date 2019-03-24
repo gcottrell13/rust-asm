@@ -4,6 +4,7 @@ import { TextViewer } from './displays/textViewer';
 import { asm2dsl, dsl2machine } from '../utils/language/compilers';
 import { isNullOrWhitespace } from '../utils/stringUtils';
 import { MyMonacoEditor } from './displays/monacoEditor/MyMonacoEditor';
+import { useGlobalDslWasmState } from '../state/globalState';
 
 export interface DslCompilerProps {
 
@@ -12,11 +13,14 @@ export interface DslCompilerProps {
 function useCompiler(text: string): [string, string, () => void] {
 	const [compiledText, setCompiledText] = useState<string>('');
 	const [compilerError, setCompilerError] = useState('');
+	const [_, setGlobalStateText] = useGlobalDslWasmState('dslCompiled');
 	const compile = () => {
 		try {
 			// setCompiledText(dsl2machine(asm2dsl(text)));
-			setCompiledText(asm2dsl(text));
+			const _compiledText = asm2dsl(text);
+			setCompiledText(_compiledText);
 			setCompilerError('Compiled successfully');
+			setGlobalStateText(_compiledText);
 		}
 		catch (e) {
 			setCompilerError(e.message);
