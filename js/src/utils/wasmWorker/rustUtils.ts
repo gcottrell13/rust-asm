@@ -1,38 +1,12 @@
 import { GetWasmExports } from './webAssembly';
-import { Maybe } from './utilTypes';
-import { Trigger } from './debuggerEvents';
+import { Trigger } from '../debuggerEvents';
 import { Events } from './enums/Events';
-import { dsl2machine } from './language/compilers';
-import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from './language/syscalls';
-import { RefreshScreen } from './screenDriver';
-import { InitializeWindowBarrel } from './windowBarrel';
+import { dsl2machine } from '../language/compilers';
+import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from './syscalls';
+import { RefreshScreen } from '../screenDriver';
+import { InitializeWindowBarrel } from '../windowBarrel';
 
-// Opcodes:
-// 0    NO-OP
-// 1    load memory location (param relative pointer to location) => bus
-//          points to an absolute address
-// 2    bus => set memory location (param relative pointer to location)
-//          points to an absolute address
-// 3    load relative memory (param offset) => bus
-// 4    bus => set relative memory (param offset)
-// 5    bus => alu
-// 6    add => bus and keep in alu
-// 7    negate => bus and keep in alu
-// 8    multiply => bus and keep in alu
-// 9    invert (1/x) => bus and keep in alu
-// 10   jump relative from bus
-// 11   bgz value from bus, jump relative (param offset)
-// 12   blz value from bus, jump relative (param offset)
-// 13   bez value from bus, jump relative (param offset)
-// 14   allocate new block
-// 15   syscall (code from bus)
-// 16   halt
-// 17   pause (halts but also advances 1 step)
-// 18   load memory location (param location) => bus
-// 19   bus => set memory location (param location)
-// 20   load immediate to bus (param value)
-
-let MEM_SIZE = 1024 * 32;
+let MEM_SIZE: number = -1;
 
 class CombinedArray {
 	private subarrays: Uint32Array[];
@@ -173,6 +147,10 @@ class CombinedArray {
 }
 
 export function GetMemoryBuffer(location: number, length: number): CombinedArray {
+	if (MEM_SIZE === -1) {
+		throw new Error(`Uninitialized WASM`);
+	}
+
 	const get = GetWasmExports().r_GetWasmMemoryLocation;
 	const memoryBuffer = GetWasmExports().memory.buffer;
 	const bufferParts: Uint32Array[] = [];
@@ -256,7 +234,7 @@ export function MainLoop() {
  *      EMPTY -> NOT STARTED
  * - Continue()
  *      RUNNING
- * - wasm will pause
+ * - wasm will generate a system interrupt or pause
  * - refresh all buffer contents
  *      input buffers will recieve contents
  *      

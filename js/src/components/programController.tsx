@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { TextViewer } from './displays/textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
-import { CheckStatus, StepOverProgram } from '../utils/controlUtils';
-import { ProcessorStatus } from '../utils/enums/ProcessorStatus';
+import { ProcessorStatus } from '../utils/wasmWorker/enums/ProcessorStatus';
 import { AddListener, RemoveListener } from '../utils/debuggerEvents';
-import { Events } from '../utils/enums/Events';
+import { Events } from '../utils/wasmWorker/enums/Events';
 import { EventListener } from './utils/EventListener';
-import { GetBlock, GetInstructionPointer } from '../utils/rustUtils';
 
 export interface ProgramControllerProps {
 

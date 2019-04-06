@@ -88,7 +88,7 @@ export function useGlobalState<T>(key: string): PayloadValue<T> {
 	const payload = useContext<Payload<T>>(globals[key].context);
 
 	if (!payload) {
-		throw new Error('useGlobalState must be a descendant of <GlobalStateProvider/>');
+		throw new Error('useGlobalState must be a descendant of the GlobalStateProvider component');
 	}
 
 	return payload.value;

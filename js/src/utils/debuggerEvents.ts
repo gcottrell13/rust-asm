@@ -1,5 +1,5 @@
 import { SMap } from './utilTypes';
-import { Events } from './enums/Events';
+import { Events } from './wasmWorker/enums/Events';
 
 export interface Listener {
 	(data?: any): void;

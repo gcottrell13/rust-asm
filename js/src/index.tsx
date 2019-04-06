@@ -1,8 +1,8 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-import { loadWasmAsync } from './utils/webAssembly';
-import { getWasmImports } from './utils/wasmImports';
+import { loadWasmAsync } from './utils/wasmWorker/webAssembly';
+import { getWasmImports } from './utils/wasmWorker/wasmImports';
 import { MAIN } from './components/main';
 
 (self as any).MonacoEnvironment = {

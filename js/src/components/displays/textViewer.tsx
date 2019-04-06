@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import { GetBlock, GetInstructionPointer } from '../../utils/rustUtils';
 import { Glyphicon } from 'react-bootstrap';
-import { ProcessorStatus } from '../../utils/enums/ProcessorStatus';
-import { CheckStatus } from '../../utils/controlUtils';
-import { AddListener } from '../../utils/debuggerEvents';
-import { Events } from '../../utils/enums/Events';
 
 export interface TextViewerProps {
 	blocksToDisplay: number[];

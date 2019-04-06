@@ -1,6 +1,6 @@
 import { Maybe, SMap, Either } from '../utilTypes';
 import * as _ from 'lodash';
-import { GetMemoryBuffer } from '../rustUtils';
+import { GetMemoryBuffer } from './rustUtils';
 import { contains } from '../generalUtils';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { bsStyles } from 'react-bootstrap/lib/utils/bootstrapUtils';

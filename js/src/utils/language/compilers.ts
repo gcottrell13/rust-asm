@@ -3,7 +3,7 @@ import { AsmCompiler } from './asmCompiler';
 import { instructions } from './dsla';
 
 export function dsl2machine(text: string): number[] {
-	return text.split('\n').map(toInt).map(n => isNaN(n) ? 0 : n);
+	return text.split(/[\n\r]+/g).map(toInt).map(n => isNaN(n) ? 0 : n);
 }
 
 export function asm2dsl(text: string): string {

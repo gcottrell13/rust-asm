@@ -6,6 +6,12 @@ export type Dict<K extends string | number | symbol, V> = { [p in K]: V; };
 
 export type keyable = string | number | symbol;
 
+type DiscriminateUnion<T, K extends keyof T, V extends T[K]> =
+	T extends Record<K, V> ? T : never;
+export type discriminantToHandler<T extends Record<K, any>, K extends keyof T> = {
+	[V in T[K]]: (data: DiscriminateUnion<T, K, V>) => void;
+};
+
 interface MapFunction<TIn, TOut> {
 	(v: TIn): TOut;
 }
@@ -22,49 +28,49 @@ interface Matching<T> {
 type Optional<T> = T | null | undefined;
 
 export interface Maybe<T> {
-    /**
-     * Gives either the value if Just<T> or null if None.
-     */
+	/**
+	 * Gives either the value if Just<T> or null if None.
+	 */
 	value(): T | null;
 
-    /**
-     * UNSAFE Gives the value. Use only if you know for sure that the value will exist.
-     */
+	/**
+	 * UNSAFE Gives the value. Use only if you know for sure that the value will exist.
+	 */
 	unwrap(): T;
 
-    /**
-     * Returns whether or not there is a value.
-     */
+	/**
+	 * Returns whether or not there is a value.
+	 */
 	hasValue(): boolean;
 
-    /**
-     * Applies the given function to the value, if it exists.
-     * @param fn the mapping function
-     */
+	/**
+	 * Applies the given function to the value, if it exists.
+	 * @param fn the mapping function
+	 */
 	map<R>(fn: MapFunction<T, Optional<R>>): Maybe<R>;
 
-    /**
-     * Provides a default value if none
-     * @param fn 
-     */
+	/**
+	 * Provides a default value if none
+	 * @param fn
+	 */
 	else(fn: () => T): Maybe<T>;
 
-    /**
-     * Gets the given property, if it exists.
-     * @param propName the property to get
-     */
+	/**
+	 * Gets the given property, if it exists.
+	 * @param propName the property to get
+	 */
 	prop<O extends keyof T>(propName: O): Maybe<T[O]>;
 
-    /**
-     * Calls the appropriate function given the state of the Maybe
-     * @param m 
-     */
+	/**
+	 * Calls the appropriate function given the state of the Maybe
+	 * @param m
+	 */
 	match(m: Matching<T>): Maybe<T>;
 
-    /**
-     * Returns a value if it matches.
-     * @param fn fn
-     */
+	/**
+	 * Returns a value if it matches.
+	 * @param fn fn
+	 */
 	filter(fn: FilterFunction<T>): Maybe<T>;
 }
 
@@ -111,6 +117,7 @@ export class None<T> implements Maybe<T> {
 
 export class Just<T> implements Maybe<T> {
 	$value: T;
+
 	constructor(v: T) {
 		this.$value = v;
 	}
@@ -182,7 +189,7 @@ export function compose<X, Y, Z>(fn1: (x: X) => Y, fn2: (y: Y) => Z): ((x: X) =>
 /**
  * Used to un-nest nested Maybe's.
  * Takes in the inner maybe.
- * @example 
+ * @example
  * let m: Maybe<Maybe<number>>;
  * let innerMaybe: Maybe<number> = m.map(collapse);
  * @param m maybe

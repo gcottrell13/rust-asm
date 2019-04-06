@@ -1,4 +1,4 @@
-import { ReadFromBuffer, GetBufferOfType, BufferType } from './language/syscalls';
+import { ReadFromBuffer, GetBufferOfType, BufferType } from './wasmWorker/syscalls';
 import { compose, Maybe, collapse } from './utilTypes';
 import * as d from './drawing';
 import { group } from './generalUtils';

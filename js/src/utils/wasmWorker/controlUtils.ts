@@ -1,9 +1,9 @@
 import { ProcessorStatus } from './enums/ProcessorStatus';
 import { GetWasmExports } from './webAssembly';
-import { AddListener, Trigger, RemoveListener } from './debuggerEvents';
+import { AddListener, Trigger, RemoveListener } from '../debuggerEvents';
 import { Events } from './enums/Events';
 import { Continue, StepOver } from './rustUtils';
-import { RefreshBuffers } from './language/syscalls';
+import { RefreshBuffers } from './syscalls';
 
 let status: ProcessorStatus = ProcessorStatus.Empty;
 
