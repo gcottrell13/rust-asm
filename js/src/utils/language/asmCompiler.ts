@@ -278,7 +278,7 @@ export class AsmCompiler {
 				const emitted = gvd.emit();
 				if (emitted.length > 0) {
 					gvd.location = codes.length + 1 + 3;
-					const [head, ... tail] = emitted;
+					const [head, ...tail] = emitted;
 					codes.push(`${head} ${comment}`);
 					codes = codes.concat(tail);
 					if (gvd.typeName === VariableType.Array)
@@ -288,8 +288,8 @@ export class AsmCompiler {
 
 			// TODO: insert jump point at beginning of program
 			codes.unshift(
-				... _DslOpcodes.LoadImmmediateToBus(codes.length + 4),
-				... _DslOpcodes.JumpWithBusValueRelative()
+				..._DslOpcodes.LoadImmmediateToBus(codes.length + 4),
+				..._DslOpcodes.JumpWithBusValueRelative()
 			);
 
 			let expanded: InstructionBoundWithData[] = [];
@@ -327,12 +327,12 @@ export class AsmCompiler {
 				let dslCodeComment = DslCodeToComment[emitted[0]];
 				if (dslCodeComment) {
 					const comment = comments.formatComment(index, dslCodeComment);
-					const [head, ... tail] = emitted;
+					const [head, ...tail] = emitted;
 					codes.push(`${head} # ${comment}`);
 					codes = codes.concat(tail);
 				}
 				else {
-					codes.push(... emitted);
+					codes.push(...emitted);
 				}
 			});
 
