@@ -5,11 +5,8 @@ import {
 	mode,
 	getVariableParts,
 	RestFnTo,
-	AsmEmitter,
-	machineOperation,
 	DSLError,
-	AsmToMachineCodes,
-	InstructionBoundWithData, argsAndReturnToFunctions,
+	InstructionBoundWithData,
 } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { isNullOrWhitespace } from '../stringUtils';
