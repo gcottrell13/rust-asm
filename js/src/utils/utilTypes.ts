@@ -6,10 +6,10 @@ export type Dict<K extends string | number | symbol, V> = { [p in K]: V; };
 
 export type keyable = string | number | symbol;
 
-type DiscriminateUnion<T, K extends keyof T, V extends T[K]> =
+export type DiscriminateUnion<T, K extends keyof T, V extends T[K]> =
 	T extends Record<K, V> ? T : never;
-export type discriminantToHandler<T extends Record<K, any>, K extends keyof T> = {
-	[V in T[K]]: (data: DiscriminateUnion<T, K, V>) => void;
+export type discriminantToHandler<T extends Record<K, any>, K extends keyof T, TArg> = {
+	[V in T[K]]: (data: DiscriminateUnion<T, K, V>, args: TArg) => void;
 };
 
 interface MapFunction<TIn, TOut> {

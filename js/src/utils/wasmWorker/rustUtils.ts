@@ -1,9 +1,6 @@
 import { GetWasmExports } from './webAssembly';
-import { Trigger } from '../debuggerEvents';
-import { Events } from './enums/Events';
 import { dsl2machine } from '../language/compilers';
-import { RefreshBuffers, GetSyscallWithNumber, SyscallResult } from './syscalls';
-import { RefreshScreen } from '../screenDriver';
+import { GetSyscallWithNumber, SyscallResult } from './syscalls';
 import { InitializeWindowBarrel } from '../windowBarrel';
 
 let MEM_SIZE: number = -1;
@@ -216,32 +213,7 @@ export function Initialize(text: string) {
 	MEM_SIZE = exports.r_GetMemoryBlockSize();
 
 	GetBlock(0).set(dsl2machine(text).slice(0, MEM_SIZE), 1);
-
-	Trigger(Events.LOAD);
 }
-
-export function MainLoop() {
-	Continue();
-	RefreshBuffers();
-	RefreshScreen();
-	// terminal
-}
-
-/**
- * steps to run WASM:
- * 
- * - load text into wasm and initialize
- *      EMPTY -> NOT STARTED
- * - Continue()
- *      RUNNING
- * - wasm will generate a system interrupt or pause
- * - refresh all buffer contents
- *      input buffers will recieve contents
- *      
- * - draw screen buffer (if it exists)
- * - output to terminal
- * - loop continue
- */
 
 /**
  * Will prompt the rust processor to continue execution, if paused, not started, or already running.

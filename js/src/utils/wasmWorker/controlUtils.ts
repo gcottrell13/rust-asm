@@ -16,7 +16,6 @@ export function CheckStatus(targets: ProcessorStatus[]) {
  */
 export function StartProgram() {
 	if (!CheckStatus([ProcessorStatus.NotStarted])) return;
-	Trigger(Events.START);
 	Continue();
 }
 
@@ -25,6 +24,10 @@ export function StartProgram() {
  */
 export function PauseProgram() {
 
+}
+
+export function ResumeProgram() {
+	
 }
 
 export function StepOverProgram() {

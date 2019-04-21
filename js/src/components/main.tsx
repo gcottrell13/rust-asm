@@ -8,6 +8,7 @@ export const MAIN = () => {
 	return (
 		<DslWasmStateProvider
 			dslCompiled={''}
+			activeWorkers={[]}
 		>
 			<Tabs
 				id={'tabs'}

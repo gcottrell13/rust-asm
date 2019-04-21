@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Glyphicon } from 'react-bootstrap';
 
 export interface TextViewerProps {
-	blocksToDisplay: number[];
+	blocksToDisplay: [number, ...number[]];
 	canSetBreakpoints: boolean;
 	getPausedLine: () => number;
-	getBlock: (blockNum: number) => (number | string)[];
+	getBlock: (blockNum: number) => (number | string)[] | null;
 
 	allowEditing?: boolean;
 	hideNullRuns?: boolean;
@@ -44,7 +44,8 @@ export function TextViewer({
 		}
 	};
 
-	const memory = blocksToDisplay.reduce<(string | number)[]>((prev, blockNum) => prev.concat(getBlock(blockNum)), ['']);
+	const memory = blocksToDisplay.reduce<(string | number)[]>(
+		(prev, blockNum) => prev.concat(getBlock(blockNum) || [`Cannot find block ${blockNum}`]), ['']);
 
 	let lines: JSX.Element[] = [];
 

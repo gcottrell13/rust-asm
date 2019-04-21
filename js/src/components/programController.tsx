@@ -1,10 +1,7 @@
 import * as React from 'react';
 import { TextViewer } from './displays/textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
-import { ProcessorStatus } from '../utils/wasmWorker/enums/ProcessorStatus';
-import { AddListener, RemoveListener } from '../utils/debuggerEvents';
-import { Events } from '../utils/wasmWorker/enums/Events';
-import { EventListener } from './utils/EventListener';
+import { StepAsync, RequestBlockAsync } from '../utils/workerCommunication/messages';
 
 export interface ProgramControllerProps {
 
@@ -12,18 +9,50 @@ export interface ProgramControllerProps {
 
 
 interface IState {
-
+	status: 'running' | 'paused';
+	currentLine: number;
+	currentBlock: number[] | null;
+	currentBlockNum: number;
 }
 
 export class ProgramController extends React.Component<ProgramControllerProps, IState> {
 	state: IState = {
+		status: 'paused',
+		currentLine: 0,
+		currentBlock: null,
+		currentBlockNum: -1,
 	};
 
-	onPause = () => {
+	onRequestBlock = (num: number) => {
+		const { currentBlockNum, currentBlock } = this.state;
+		if (num !== currentBlockNum) {
+			RequestBlockAsync(AllWorkers.getIds()[0], num)
+			.then((data) => {
+				if (data) {
+					this.setState({
+						currentBlock: data.block ? [...data.block] : null,
+						currentBlockNum: num,
+					});
+				}
+			});
+			return null;
+		}
+		else {
+			return currentBlock;
+		}
+	};
 
+	onPause = (currentLine: number) => {
+		this.setState({
+			status: 'paused',
+			currentLine,
+		});
 	};
 
 	onContinue = () => {
+		this.setState({
+			status: 'running',
+		});
 	};
 
 	onStop = () => {
@@ -31,22 +60,25 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
 	};
 
 	onStepOver = () => {
-		StepOverProgram();
+		StepAsync(AllWorkers.getIds()[0])
+			.then(data => this.onPause(data ? data.stoppedOnLine : this.state.currentLine));
+		this.onContinue();
 	};
 
 	render() {
+		const { status, currentLine, currentBlockNum } = this.state;
 		return (
 			<div className={'controls-container'}>
 				<div className={'program-controls'}>
 					{
-						CheckStatus([ProcessorStatus.Running]) && (
+						status === 'running' && (
 							<Button>
 								<Glyphicon glyph={'pause'} />
 							</Button>
 						)
 					}
 					{
-						CheckStatus([ProcessorStatus.NotStarted, ProcessorStatus.Paused]) && (
+						status === 'paused' && (
 							<Button
 								id={'continue-button'}
 								onClick={this.onContinue}
@@ -56,7 +88,7 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
 						)
 					}
 					{
-						CheckStatus([ProcessorStatus.NotStarted, ProcessorStatus.Paused]) && (
+						status === 'paused' && (
 							<Button
 								id={'step-over-button'}
 								onClick={this.onStepOver}
@@ -65,26 +97,12 @@ export class ProgramController extends React.Component<ProgramControllerProps, I
 							</Button>
 						)
 					}
-					{
-						CheckStatus([ProcessorStatus.Halted]) && (
-							<span>
-								Program Halted
-							</span>
-						)
-					}
 				</div>
 				<TextViewer
-					blocksToDisplay={[0]}
+					blocksToDisplay={[currentBlockNum]}
 					canSetBreakpoints={false}
-					getPausedLine={() => CheckStatus([ProcessorStatus.Paused]) ? GetInstructionPointer() : -1}
-					getBlock={x => [... GetBlock(x).getCombined()]} // TODO: make better
-				/>
-				<EventListener
-					attach={AddListener}
-					detach={RemoveListener}
-					listeners={{
-						[Events.HALT]: this.onStop,
-					}}
+					getPausedLine={() => status === 'paused' ? currentLine : -1}
+					getBlock={this.onRequestBlock}
 				/>
 			</div>
 		);

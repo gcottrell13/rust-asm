@@ -6,13 +6,14 @@ import { GlobalStateProvider, useGlobalState } from '../components/utils/globalS
  */
 export interface DslWasmGlobalState {
 	dslCompiled: string;
+	activeWorkers: string[];
 }
 
 /**
  * The official wrapper of useGlobalState
  * @param key
  */
-export function useGlobalDslWasmState<TKey extends keyof DslWasmGlobalState, TValue extends DslWasmGlobalState[TKey]>(key: TKey)  {
+export function useGlobalDslWasmState<TKey extends keyof DslWasmGlobalState>(key: TKey)  {
 	return useGlobalState<DslWasmGlobalState[TKey]>(key);
 }
 

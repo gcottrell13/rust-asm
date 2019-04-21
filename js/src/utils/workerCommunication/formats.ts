@@ -1,4 +1,4 @@
-import { BufferType } from './syscalls';
+import { BufferType } from '../wasmWorker/syscalls';
 
 export type MainToWorker = {
 	type: 'add-breakpoint';
@@ -26,22 +26,30 @@ export type MainToWorker = {
 } | {
 	// the machine will perform one command before stopping again
 	type: 'step',
+} | {
+	type: 'request-buffer',
+	bufferType: BufferType,
+	// responds with 'buffer-contents'
+} | {
+	type: 'get-block',
+	blockNum: number,	
 };
 
 export type WorkerToMain = {
 	type: 'stopped',
 	stoppedOnLine: number;
 } | {
-	type: 'ack-start',
-} | {
-	type: 'ack-stop',
-} | {
 	type: 'buffer-contents',
-	buffer: Uint32Array,
-	bufferType: BufferType;
+	buffers: Uint32Array[],
 } | {
 	type: 'initialized',
 } | {
 	type: 'error',
 	message: string,
+} | {
+	type: 'block',
+	block: Uint32Array | null,
+} | {
+	type: 'updated-breakpoint',
+	status: boolean;
 };

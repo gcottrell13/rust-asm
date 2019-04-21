@@ -1,8 +1,5 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-
-import { loadWasmAsync } from './utils/wasmWorker/webAssembly';
-import { getWasmImports } from './utils/wasmWorker/wasmImports';
 import { MAIN } from './components/main';
 
 (self as any).MonacoEnvironment = {
@@ -21,14 +18,14 @@ import { MAIN } from './components/main';
 		}
 		return './editor.worker.bundle.js';
 	},
-}
+};
 
-loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {
-	ReactDOM.render(
-		<MAIN />,
-		document.getElementById('output')
-	);
-});
+// loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {
+ReactDOM.render(
+	<MAIN />,
+	document.getElementById('output')
+);
+// });
 
 /**
  * 1: Build WASM Engine

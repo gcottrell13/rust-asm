@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import { GetMemoryBuffer } from './rustUtils';
 import { contains } from '../generalUtils';
 import { InitializeWindowBarrel } from '../windowBarrel';
-import { bsStyles } from 'react-bootstrap/lib/utils/bootstrapUtils';
 
 // -----------------------------------------------------------------------
 //#region Descriptions of syscalls + enum
@@ -120,7 +119,7 @@ const buffers: SMap<Buffer> = {};
 
 let bufferCreateId = 0;
 
-const _zeroBuffer = new Int32Array();
+const _zeroBuffer = new Uint32Array();
 
 export type SyscallFunction = (parameter: number) => SyscallResult;
 
@@ -143,7 +142,7 @@ interface Buffer {
 	head: number;
 	id: number;
 	type: BufferType;
-	contents: Int32Array;
+	contents: Uint32Array;
 
 	lengthInitialized: boolean;
 	headInitialized: boolean;
@@ -159,19 +158,29 @@ export function GetBufferOfType(type: BufferType) {
 	return Maybe(_.values(buffers).filter(b => b.type === type)[0]);
 }
 
+export function GetBuffersOfType(type: BufferType) {
+	return _.values(buffers).filter(b => b.type === type);
+}
+
 function IsFromWasm(buffer: Buffer) {
-	return contains([
-		BufferType.OUTPUT_PALETTE,
-		BufferType.OUTPUT_SCREEN,
-		BufferType.OUTPUT_SCREEN_SIZE,
-	], buffer.type);
+	return contains(
+		[
+			BufferType.OUTPUT_PALETTE,
+			BufferType.OUTPUT_SCREEN,
+			BufferType.OUTPUT_SCREEN_SIZE,
+		], 
+		buffer.type
+	);
 }
 
 function IsToWasm(buffer: Buffer) {
-	return contains([
-		BufferType.INPUT_KEY,
-		BufferType.INPUT_TERMINAL,
-	], buffer.type);
+	return contains(
+		[
+			BufferType.INPUT_KEY,
+			BufferType.INPUT_TERMINAL,
+		], 
+		buffer.type
+	);
 }
 
 function IsBufferInitialized(buffer: Buffer) {
@@ -219,7 +228,7 @@ function SetBufferLength(length: number): SyscallResult {
 			Just(buffer) {
 				buffer.length = length;
 				buffer.lengthInitialized = true;
-				buffer.contents = new Int32Array(length);
+				buffer.contents = new Uint32Array(length);
 			},
 		})
 		.map(b => SyscallResult.OK)
@@ -313,7 +322,7 @@ export function WriteToBuffer(bufferId: number, text: Int32Array) {
  * Returns text that was read from rust memory earlier
  * @param id buffer id
  */
-export function ReadFromBuffer(bufferId: number): Maybe<Int32Array> {
+export function ReadFromBuffer(bufferId: number): Maybe<Uint32Array> {
 	return Maybe(buffers[bufferId])
 		.filter(IsFromWasm)
 		.filter(IsBufferInitialized)

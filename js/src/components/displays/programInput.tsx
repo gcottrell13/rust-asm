@@ -4,7 +4,7 @@ import { FilePicker } from '../form/filePicker';
 import { useGlobalDslWasmState } from '../../state/globalState';
 
 export interface ProgramInputProps {
-	onLoad: (text: string) => void;
+	onLoad: (text: string) => Promise<void>;
 }
 
 export function ProgramInput({ onLoad }: ProgramInputProps) {

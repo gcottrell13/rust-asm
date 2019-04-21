@@ -53,5 +53,9 @@ export function group<T>(n: number, arr: ArrayLike<T>): T[][] {
 			lastGroup = [];
 		}
 	}
+	if (lastGroup.length > 0)
+	{
+		groups.push(lastGroup);
+	}
 	return groups;
 }
