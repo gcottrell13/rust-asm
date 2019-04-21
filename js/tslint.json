@@ -121,7 +121,6 @@
     ],
     "jsx-alignment": true,
     "jsx-no-bind": true,
-    "jsx-no-lambda": true,
     "jsx-self-close": true,
     "jsx-wrap-multiline": true
   }
