@@ -48,6 +48,11 @@ pub extern "C" fn r_RemoveBreakpoint(n: jsint) {
 }
 
 #[no_mangle]
+pub extern "C" fn r_GetIsBreakpoint(n: jsint) -> bool {
+	return GetIsBreakpoint(n as u32);
+}
+
+#[no_mangle]
 pub extern "C" fn r_Continue() {
 	Continue();
 }
@@ -167,6 +172,11 @@ fn RemoveBreakpoint(point: u32) {
 	if prog.Breakpoints.contains(&point) {
 		prog.Breakpoints.remove(&point);
 	}
+}
+
+fn GetIsBreakpoint(point: u32) -> bool {
+	let mut prog = MAIN_PROGRAM.lock().unwrap();
+	return prog.Breakpoints.contains(&point);
 }
 
 fn Continue() {

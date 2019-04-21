@@ -3,6 +3,7 @@ import { SMap, Maybe } from '../utilTypes';
 export interface WasmExports {
 	r_SetBreakpoint: (b: number) => void;
 	r_RemoveBreakpoint: (b: number) => void;
+	r_GetIsBreakpoint: (b: number) => boolean;
 	r_Continue: () => void;
 	r_StepOver: () => void;
 	r_GetInstructionPointer: () => number;

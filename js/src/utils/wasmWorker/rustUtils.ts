@@ -284,6 +284,10 @@ export function RemoveBreakpoint(b: number) {
 	GetWasmExports().r_RemoveBreakpoint(b);
 }
 
+export function GetIsBreakpoint(b: number) {
+	return GetWasmExports().r_GetIsBreakpoint(b);
+}
+
 /**
  * Gets the memory block size from rust
  */
