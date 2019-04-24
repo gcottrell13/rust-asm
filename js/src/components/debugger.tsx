@@ -9,7 +9,7 @@ import { useGlobalDslWasmState } from '../state/globalState';
 
 
 export function DebuggerApplication() {
-	const [activeWorkers] = useGlobalDslWasmState('activeWorkers');
+	const [loaded, setLoaded] = useState<boolean | null>(null);
 	const [loaded, setLoaded] = useState(false);
 
 	function onProgramLoad() {

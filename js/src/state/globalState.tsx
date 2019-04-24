@@ -6,7 +6,6 @@ import { GlobalStateProvider, useGlobalState } from '../components/utils/globalS
  */
 export interface DslWasmGlobalState {
 	dslCompiled: string;
-	activeWorkers: string[];
 }
 
 /**
