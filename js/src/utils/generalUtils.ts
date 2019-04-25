@@ -1,4 +1,10 @@
 
+export function Sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}
+
 export function TextFromBlobAsync(blob: Blob): Promise<string> {
 	return new Promise((resolve, reject) => {
 		var reader = new FileReader();

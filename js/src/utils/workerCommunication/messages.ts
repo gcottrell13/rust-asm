@@ -1,5 +1,6 @@
 import { AllWorkers } from './comm';
 import { BufferType } from '../wasmWorker/syscalls';
+import { InitializeWindowBarrel } from '../windowBarrel';
 
 async function UpdateBuffers(id: string) {
 	const screenBuffers = await AllWorkers.messageWorker(id, {
@@ -48,3 +49,16 @@ export async function SetBreakpoint(id: string, b: number) {
 		return result.status;
 	return false;
 }
+
+export async function PingWorkerAsync(id: string) {
+	return await AllWorkers.messageWorker(id, {
+		type: 'ping',
+	})('pong');
+}
+
+InitializeWindowBarrel('workerMessages', {
+	getIds: AllWorkers.getIds,
+	RequestBlockAsync,
+	StepAsync,
+	PingWorkerAsync,
+});

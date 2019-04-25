@@ -275,11 +275,11 @@ export function GetWasmMemoryLocation(location: number): number {
 	return GetWasmExports().r_GetWasmMemoryLocation(location);
 }
 
-InitializeWindowBarrel('rustUtils', {
-	GetWasmMemoryLocation,
-	setMemoryLocation,
-	GetBlock,
-	GetMemoryBuffer,
-	MemSize: () => MEM_SIZE,
-	CombinedArray,
-});
+// InitializeWindowBarrel('rustUtils', {
+// 	GetWasmMemoryLocation,
+// 	setMemoryLocation,
+// 	GetBlock,
+// 	GetMemoryBuffer,
+// 	MemSize: () => MEM_SIZE,
+// 	CombinedArray,
+// });

@@ -350,21 +350,3 @@ export function RefreshBuffers() {
 
 // -----------------------------------------------------------------------
 //#endregion
-//#region Export window barrel
-// -----------------------------------------------------------------------
-
-InitializeWindowBarrel('syscalls', {
-	WriteAllBuffersToWasm,
-	WriteToBuffer,
-	ReadFromBuffer,
-	CreateBuffer,
-	SetBufferType,
-	SetBufferLength,
-	SetBufferHead,
-	GetSyscallWithNumber,
-	GetMemoryBuffer,
-});
-
-// -----------------------------------------------------------------------
-//#endregion
-// -----------------------------------------------------------------------

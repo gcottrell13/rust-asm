@@ -5,6 +5,7 @@ import { Initialize, GetBlock, GetInstructionPointer, SetBreakpoint, GetIsBreakp
 import { getWasmImports } from './wasmImports';
 import { GetBuffersOfType } from './syscalls';
 import { StepOverProgram, ResumeProgram } from './controlUtils';
+import { Sleep } from '../generalUtils';
 
 type handler = (message: WorkerToMain, transfer?: Transferable[]) => void;
 
@@ -43,11 +44,9 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 	stop(data, respond) {
 	},
 	initialize(data, respond) {
-		loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {
-			Initialize(data.data);
-			respond({
-				type: 'initialized',
-			});
+		Initialize(data.data);
+		respond({
+			type: 'initialized',
 		});
 	},
 	step(data, respond) {
@@ -78,15 +77,28 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 			[block]
 		);
 	},
+
+	ping(_, respond) {
+		respond({
+			type: 'pong',
+		});
+	},
 };
 
 //#region setup handler
 
-export function setupWorker(ctx: Worker) {
+export async function setupWorker(ctx: Worker) {
 	ctx.onmessage = ev => messageTypes[(ev.data as MainToWorker).type](
 		ev.data as any,
 		(msg, transfer) => ctx.postMessage(msg, transfer)
 	);
+
+	await loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports());
+	await Sleep(100);
+
+	ctx.postMessage({
+		type: 'worker-ready',
+	});
 }
 
 //#endregion

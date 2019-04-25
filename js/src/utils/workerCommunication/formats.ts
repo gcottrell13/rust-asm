@@ -1,6 +1,8 @@
 import { BufferType } from '../wasmWorker/syscalls';
 
 export type MainToWorker = {
+	type: 'ping',
+} | {
 	type: 'add-breakpoint';
 	line: number;
 } | {
@@ -36,6 +38,8 @@ export type MainToWorker = {
 };
 
 export type WorkerToMain = {
+	type: 'worker-ready',
+} | {
 	type: 'stopped',
 	stoppedOnLine: number;
 } | {
@@ -52,4 +56,6 @@ export type WorkerToMain = {
 } | {
 	type: 'updated-breakpoint',
 	status: boolean;
+} | {
+	type: 'pong',
 };

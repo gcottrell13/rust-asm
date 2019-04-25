@@ -4,13 +4,23 @@ import { get } from '../get';
 
 type responseListener = (arg: WorkerToMain) => void;
 
-class Workers {
+interface PublicWorkers {
+	
+	createWorker(): string;
+	getIds(): string[];
+	messageWorker(id: string, message: MainToWorker, transfer?: Transferable[]): 
+		<T extends WorkerToMain['type']>(waitFor: T, timeout?: number) => Promise<DiscriminateUnion<WorkerToMain, 'type', T> | null>;
+	killWorker(id: string): void;
+	
+}
+
+class Workers implements PublicWorkers {
 	private _id: number = 0;
 	private _workers: SMap<Worker> = {};
 	private _workerEvents: SMap<SMap<responseListener[]>> = {};
 
 	public createWorker(): string {
-		const worker = new Worker('worker.js');
+		const worker = new Worker('wasm.worker.bundle.js');
 		const id = this._id ++;
 
 		worker.onmessage = (ev: MessageEvent) => {
@@ -60,7 +70,7 @@ class Workers {
 	}
 
 
-	private addExpectedResponse(id: string, waitfor: string, response: responseListener) {
+	public addExpectedResponse<T extends WorkerToMain['type']>(id: string, waitfor: T, response: responseListener) {
 		
 		if (this._workerEvents[id] === undefined) {
 			this._workerEvents[id] = {};
@@ -74,4 +84,18 @@ class Workers {
 	}
 }
 
-export const AllWorkers = new Workers();
+const _allWorkers = new Workers();
+export const AllWorkers: PublicWorkers = _allWorkers;
+
+
+// import { useEffect, useState } from 'react';
+export function createWebworkerAsync() {
+	return new Promise<string>((resolve) => {
+		const id = _allWorkers.createWorker();
+		console.log('Created worker', id);
+		_allWorkers.addExpectedResponse(id, 'worker-ready', () => {
+			console.log('Worker', id, 'ready');
+			resolve(id);
+		});
+	});
+}

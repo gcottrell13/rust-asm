@@ -1,3 +1,3 @@
 import { setupWorker } from './utils/wasmWorker/worker';
 
-setupWorker(self as any);
+setupWorker((typeof self !== 'undefined' ? self : this) as any);
