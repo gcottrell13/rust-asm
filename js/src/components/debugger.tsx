@@ -1,31 +1,55 @@
-import React, { useState } from 'react';
-import { Button, FormGroup, Row, Col, FormControl } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Row, Col } from 'react-bootstrap';
 import { ProgramInput } from './displays/programInput';
 import './debugger.scss';
 import { ProgramController } from './programController';
 import { Viewscreen } from './displays/viewscreen';
 import { InitializeWasmAsync } from '../utils/workerCommunication/messages';
-import { useGlobalDslWasmState } from '../state/globalState';
+import { createWebworkerAsync, AllWorkers } from '../utils/workerCommunication/comm';
 
 
 export function DebuggerApplication() {
-	const [loaded, setLoaded] = useState<boolean | null>(null);
-	const [loaded, setLoaded] = useState(false);
+	const [loaded, setLoaded] = useState<boolean | null | undefined>(undefined);
+	const [workerId, setWorkerId] = useState<string | null>(null);
 
-	function onProgramLoad() {
-		setLoaded(true);
+	async function onProgramLoadAsync(text: string) {
+		setLoaded(false);
+		const _workerId = await createWebworkerAsync();
+		console.log('got worker id', _workerId);
+		if (_workerId != null) {
+			await InitializeWasmAsync(_workerId, text);
+			console.log('init worker', _workerId);
+			setWorkerId(_workerId);
+			setLoaded(true);
+		}
+		else {
+			setWorkerId(null);
+		}
 	}
+
+	useEffect(
+		() => () => {
+			workerId && AllWorkers.killWorker(workerId);
+		},
+		[workerId]
+	);
 
 	return (
 		<div className={'debugger-container'}>
 			<Row>
 				<Col xs={3} className={'program-text'}>
 					{
-						loaded ? (
-							<ProgramController/>
+						loaded === true ? (
+							<ProgramController workerId={workerId!} />
 						) : (
-							<ProgramInput onLoad={text => InitializeWasmAsync(activeWorkers[0], text).then(() => onProgramLoad())}/>
-						)
+								loaded === undefined ?
+									<ProgramInput onLoad={onProgramLoadAsync} />
+									: (
+										loaded === null ?
+										<span>Failed to load worker</span>
+										: <span>Loading worker...</span>
+									)
+							)
 					}
 				</Col>
 				<Col xs={5} className={'output'}>

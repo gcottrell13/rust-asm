@@ -58,7 +58,7 @@ export function DslCompiler({}: DslCompilerProps) {
 						blocksToDisplay={[compiledText.length]}
 						canSetBreakpoints={false}
 						getPausedLine={() => -1}
-						getBlock={() => compiledText.split('\n')}
+						getBlockAsync={async () => compiledText.split('\n')}
 					/>
 				</Col>
 				<Col xs={2}>

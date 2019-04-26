@@ -1,17 +1,20 @@
 import { MainToWorker, WorkerToMain } from './formats';
-import { SMap, DiscriminateUnion } from '../utilTypes';
+import { SMap, DiscriminateUnion, getPropsOf, stripKeyFromAll } from '../utilTypes';
 import { get } from '../get';
+import { PingWorkerAsync } from './messages';
+
+type mtw = stripKeyFromAll<getPropsOf<MainToWorker, 'type'>, 'type'>;
 
 type responseListener = (arg: WorkerToMain) => void;
 
 interface PublicWorkers {
-	
+
 	createWorker(): string;
 	getIds(): string[];
-	messageWorker(id: string, message: MainToWorker, transfer?: Transferable[]): 
+	messageWorker<T extends MainToWorker['type']>(id: string, t: T, message: mtw[T], transfer?: Transferable[]):
 		<T extends WorkerToMain['type']>(waitFor: T, timeout?: number) => Promise<DiscriminateUnion<WorkerToMain, 'type', T> | null>;
 	killWorker(id: string): void;
-	
+
 }
 
 class Workers implements PublicWorkers {
@@ -21,7 +24,7 @@ class Workers implements PublicWorkers {
 
 	public createWorker(): string {
 		const worker = new Worker('wasm.worker.bundle.js');
-		const id = this._id ++;
+		const id = this._id++;
 
 		worker.onmessage = (ev: MessageEvent) => {
 			const queue = get(
@@ -43,11 +46,17 @@ class Workers implements PublicWorkers {
 		return Object.keys(this._workers);
 	}
 
-	public messageWorker(id: string, message: MainToWorker, transfer?: Transferable[]) {
+	public messageWorker<T extends MainToWorker['type']>(id: string, type: T, message: mtw[T], transfer?: Transferable[]) {
 		const worker = this._workers[id];
 		if (!worker)
 			throw new Error(`Worker ${id} not found!`);
-		worker.postMessage(message, transfer);
+		worker.postMessage(
+			{
+				type,
+				...message,
+			},
+			transfer
+		);
 
 		// return a function that can be used to wait for a particular response
 		return <T extends WorkerToMain['type']>(waitFor: T, timeout: number = 500): Promise<DiscriminateUnion<WorkerToMain, 'type', T> | null> => {
@@ -71,7 +80,7 @@ class Workers implements PublicWorkers {
 
 
 	public addExpectedResponse<T extends WorkerToMain['type']>(id: string, waitfor: T, response: responseListener) {
-		
+
 		if (this._workerEvents[id] === undefined) {
 			this._workerEvents[id] = {};
 		}
@@ -89,13 +98,9 @@ export const AllWorkers: PublicWorkers = _allWorkers;
 
 
 // import { useEffect, useState } from 'react';
-export function createWebworkerAsync() {
-	return new Promise<string>((resolve) => {
-		const id = _allWorkers.createWorker();
-		console.log('Created worker', id);
-		_allWorkers.addExpectedResponse(id, 'worker-ready', () => {
-			console.log('Worker', id, 'ready');
-			resolve(id);
-		});
-	});
+export async function createWebworkerAsync() {
+	const id = _allWorkers.createWorker();
+	console.log('Created worker', id);
+	await PingWorkerAsync(id);
+	return id;
 }

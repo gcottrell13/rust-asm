@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Glyphicon } from 'react-bootstrap';
+import { mapAsync } from '../../utils/generalUtils';
 
 export interface TextViewerProps {
 	blocksToDisplay: [number, ...number[]];
 	canSetBreakpoints: boolean;
 	getPausedLine: () => number;
-	getBlock: (blockNum: number) => (number | string)[] | null;
+	getBlockAsync: (blockNum: number) => Promise<(number | string)[] | null>;
 
 	allowEditing?: boolean;
 	hideNullRuns?: boolean;
@@ -14,13 +15,30 @@ export interface TextViewerProps {
 export function TextViewer({
 	blocksToDisplay,
 	canSetBreakpoints,
-	getBlock,
+	getBlockAsync: getBlock,
 	getPausedLine,
 	hideNullRuns = false,
 	allowEditing = false,
 }: TextViewerProps) {
 	const [breakpoints, setBreakpoint] = useState<Set<number>>(new Set());
 	const [topLine, setTopLine] = useState(1);
+	const [memory, setMemory] = useState<(string | number)[]>([]);
+
+	async function pullBlocks() {
+		return await mapAsync(blocksToDisplay, async (blockNum) => {
+			const r = await getBlock(blockNum);
+			if (r) return r;
+			return [`Cannot find block ${blockNum}`];
+		});
+	}
+	useEffect(
+		() => {
+			pullBlocks().then((data) => {
+				setMemory(data.reduce((p, c) => p.concat(c), []));
+			});
+		},
+		[blocksToDisplay]
+	);
 
 	const onClickLine = (lineNumber: number) => {
 		if (!canSetBreakpoints) return;
@@ -43,9 +61,6 @@ export function TextViewer({
 			setTopLine(Math.min(topLine + 1, memory.length - 1));
 		}
 	};
-
-	const memory = blocksToDisplay.reduce<(string | number)[]>(
-		(prev, blockNum) => prev.concat(getBlock(blockNum) || [`Cannot find block ${blockNum}`]), ['']);
 
 	let lines: JSX.Element[] = [];
 
@@ -129,9 +144,9 @@ function LineDisplay(props: LineDisplayProps) {
 			onClick={onClick}
 			className={className}
 		>
-				<span className={'line-number'}>
-					{props.lineNum}
-				</span>
+			<span className={'line-number'}>
+				{props.lineNum}
+			</span>
 			<Glyphicon
 				glyph={'minus'}
 				style={{ visibility: (props.breakpoint ? 'visible' : 'hidden') }}

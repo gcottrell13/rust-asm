@@ -30,7 +30,7 @@ export function GetWasmExports(): WasmExports {
 function setWasmExport(instance: WebAssembly.Instance) {
 	data.instance = Maybe(instance);
 
-	(window as any).WasmExports = instance.exports;
+	// (window as any).WasmExports = instance.exports;
 }
 
 export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: number) => {

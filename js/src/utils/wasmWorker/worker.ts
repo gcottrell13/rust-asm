@@ -1,27 +1,27 @@
 import { MainToWorker, WorkerToMain } from '../workerCommunication/formats';
-import { discriminantToHandler } from '../utilTypes';
+import { discriminantToHandler, stripKeyFromAll, getPropsOf } from '../utilTypes';
 import { loadWasmAsync } from './webAssembly';
 import { Initialize, GetBlock, GetInstructionPointer, SetBreakpoint, GetIsBreakpoint, RemoveBreakpoint } from './rustUtils';
 import { getWasmImports } from './wasmImports';
 import { GetBuffersOfType } from './syscalls';
 import { StepOverProgram, ResumeProgram } from './controlUtils';
-import { Sleep } from '../generalUtils';
 
-type handler = (message: WorkerToMain, transfer?: Transferable[]) => void;
+
+type wtm = stripKeyFromAll<getPropsOf<WorkerToMain, 'type'>, 'type'>;
+
+type handler = <T extends WorkerToMain['type']>(t: T, message: wtm[T], transfer?: Transferable[]) => void;
 
 const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 	'add-breakpoint'(data, respond) {
 		if (GetIsBreakpoint(data.line)) {
 			RemoveBreakpoint(data.line);
-			respond({
-				type: 'updated-breakpoint',
+			respond('updated-breakpoint', {
 				status: false,
 			});
 		}
 		else {
 			SetBreakpoint(data.line);
-			respond({
-				type: 'updated-breakpoint',
+			respond('updated-breakpoint', {
 				status: true,
 			});
 		}
@@ -36,23 +36,21 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 	},
 	start(data, respond) {
 		ResumeProgram();
-		respond({
-			type: 'stopped',
+		respond('stopped', {
 			stoppedOnLine: GetInstructionPointer(),
 		});
 	},
 	stop(data, respond) {
 	},
 	initialize(data, respond) {
-		Initialize(data.data);
-		respond({
-			type: 'initialized',
+		loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports()).then(() => {
+			Initialize(data.data);
+			respond('initialized', {});
 		});
 	},
 	step(data, respond) {
 		StepOverProgram();
-		respond({
-			type: 'stopped',
+		respond('stopped', {
 			stoppedOnLine: GetInstructionPointer(),
 		});
 	},
@@ -60,18 +58,18 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 		const buffers = GetBuffersOfType(data.bufferType)
 			.map(b => b.contents);
 		respond(
+			'buffer-contents',
 			{
-				type: 'buffer-contents',
 				buffers,
 			}, 
 			buffers
 		);
 	},
 	'get-block'(data, respond) {
-		const block = GetBlock(data.blockNum).getCombined();
+		const block = new Uint32Array(GetBlock(data.blockNum).getCombined()).buffer;
 		respond(
+			'block',
 			{
-				type: 'block',
 				block,
 			},
 			[block]
@@ -79,9 +77,7 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 	},
 
 	ping(_, respond) {
-		respond({
-			type: 'pong',
-		});
+		respond('pong', {});
 	},
 };
 
@@ -90,15 +86,13 @@ const messageTypes: discriminantToHandler<MainToWorker, 'type', handler> = {
 export async function setupWorker(ctx: Worker) {
 	ctx.onmessage = ev => messageTypes[(ev.data as MainToWorker).type](
 		ev.data as any,
-		(msg, transfer) => ctx.postMessage(msg, transfer)
+		(type, msg, transfer) => ctx.postMessage(
+			{
+				type,
+				...msg,
+			}, 
+			transfer)
 	);
-
-	await loadWasmAsync('./wasm/dsl_wasm.wasm', getWasmImports());
-	await Sleep(100);
-
-	ctx.postMessage({
-		type: 'worker-ready',
-	});
 }
 
 //#endregion

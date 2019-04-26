@@ -1,4 +1,5 @@
 import { BufferType } from '../wasmWorker/syscalls';
+import { DiscriminateUnion, Omit } from '../utilTypes';
 
 export type MainToWorker = {
 	type: 'ping',
@@ -44,7 +45,7 @@ export type WorkerToMain = {
 	stoppedOnLine: number;
 } | {
 	type: 'buffer-contents',
-	buffers: Uint32Array[],
+	buffers: ArrayBuffer[],
 } | {
 	type: 'initialized',
 } | {
@@ -52,7 +53,7 @@ export type WorkerToMain = {
 	message: string,
 } | {
 	type: 'block',
-	block: Uint32Array | null,
+	block: ArrayBuffer | null,
 } | {
 	type: 'updated-breakpoint',
 	status: boolean;

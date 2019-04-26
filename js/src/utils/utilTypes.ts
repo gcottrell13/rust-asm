@@ -6,10 +6,20 @@ export type Dict<K extends string | number | symbol, V> = { [p in K]: V; };
 
 export type keyable = string | number | symbol;
 
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
 export type DiscriminateUnion<T, K extends keyof T, V extends T[K]> =
 	T extends Record<K, V> ? T : never;
 export type discriminantToHandler<T extends Record<K, any>, K extends keyof T, TArg> = {
 	[V in T[K]]: (data: DiscriminateUnion<T, K, V>, args: TArg) => void;
+};
+
+
+export type getPropsOf<T, TKey extends keyof T> = T[TKey] extends string ? {
+	[p in T[TKey]]: DiscriminateUnion<T, TKey, p>;
+} : never;
+export type stripKeyFromAll<T, TKey> = {
+	[p in keyof T]: TKey extends keyof T[p] ? Omit<T[p], TKey> : never;
 };
 
 interface MapFunction<TIn, TOut> {

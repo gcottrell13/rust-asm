@@ -1,7 +1,6 @@
 import { GetWasmExports } from './webAssembly';
 import { dsl2machine } from '../language/compilers';
 import { GetSyscallWithNumber, SyscallResult } from './syscalls';
-import { InitializeWindowBarrel } from '../windowBarrel';
 
 let MEM_SIZE: number = -1;
 

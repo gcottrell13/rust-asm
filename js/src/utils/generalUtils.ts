@@ -5,6 +5,14 @@ export function Sleep(ms: number): Promise<void> {
 	});
 }
 
+export async function mapAsync<T, U>(items: T[], fn: (t: T) => Promise<U>) {
+	const newlist: U[] = [];
+	for (let i = 0; i < items.length; i++) {
+		newlist.push(await fn(items[i]));
+	}
+	return newlist;
+}
+
 export function TextFromBlobAsync(blob: Blob): Promise<string> {
 	return new Promise((resolve, reject) => {
 		var reader = new FileReader();
@@ -59,8 +67,7 @@ export function group<T>(n: number, arr: ArrayLike<T>): T[][] {
 			lastGroup = [];
 		}
 	}
-	if (lastGroup.length > 0)
-	{
+	if (lastGroup.length > 0) {
 		groups.push(lastGroup);
 	}
 	return groups;
