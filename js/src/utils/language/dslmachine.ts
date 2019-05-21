@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { transformer, argsAndReturnToFunctions, InstructionInformation } from './dslaHelpers';
 import { InitializeWindowBarrel } from '../windowBarrel';
 import { SMap } from '../utilTypes';
+import { SyscallsEnum } from '../SyscallsEnum';
 
 type i = number;
 
@@ -51,7 +52,7 @@ export const _DslOpcodes = {
 
 	NewBlock: () => [20],
 
-	Syscall: (i: i) => [21, i],
+	// Syscall: (i: i) => [21, i],
 
 	// 22
 
@@ -76,6 +77,15 @@ export const _DslOpcodes = {
 	ShiftLeft: () => [32],
 
 	ShiftRight: () => [33],
+
+	// Syscalls
+
+	Alert: () => [
+		21, 
+		SyscallsEnum.Alert, 
+	],
+
+	// ---------------
 
 	Halt: () => [100],
 };

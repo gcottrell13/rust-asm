@@ -1,37 +1,14 @@
 import { Maybe, SMap, Either } from '../utilTypes';
 import * as _ from 'lodash';
-import { GetMemoryBuffer } from './rustUtils';
+import { GetMemoryBuffer, GetWasmMemoryLocation } from './rustUtils';
 import { contains } from '../generalUtils';
-import { InitializeWindowBarrel } from '../windowBarrel';
+import { SyscallsEnum } from '../SyscallsEnum';
+
 
 // -----------------------------------------------------------------------
 //#region Descriptions of syscalls + enum
 // -----------------------------------------------------------------------
 
-enum syscalls {
-	/**
-	 * init new buffer with ID from bus (so JS can reference buffer with given ID)
-	 * [follow with syscall 2, syscall 3, and 6]
-	 * IDs are shared between inputs and outputs
-	 */
-	CreateBuffer = 1,
-
-	SetBufferHead = 2,
-	SetBufferLength = 3,
-	SetBufferType = 4,
-
-	DeleteBuffer = 5,
-
-	/**
-	 * File stuff
-	 */
-
-
-	/**
-	 * Other
-	 */
-	Sleep = 20,
-}
 
 // syscalls:
 // 1 - Create a new buffer
@@ -254,6 +231,18 @@ function Sleep(): SyscallResult {
 	return SyscallResult.ERROR;
 }
 
+function Alert(pointer: number) {
+	const buffer: number[] = [];
+	let data = GetWasmMemoryLocation(pointer);
+	while (data !== 0) {
+		buffer.push(data);
+		pointer ++;
+		data = GetWasmMemoryLocation(pointer);
+	}
+	console.log(new TextDecoder('utf8').decode(new Uint8Array(buffer)));
+	return SyscallResult.OK;
+}
+
 // -----------------------------------------------------------------------
 //#endregion
 //#region Map syscall numbers to functions
@@ -265,14 +254,15 @@ const _allSyscalls: SMap<SyscallFunction> = {
 	SetBufferLength,
 	SetBufferType,
 	Sleep,
+	Alert,
 };
 
 /**
  * Maps the given syscall code to the appropriate function
  * @param n
  */
-export function GetSyscallWithNumber(n: syscalls): SyscallFunction {
-	const name = syscalls[n];
+export function GetSyscallWithNumber(n: SyscallsEnum): SyscallFunction {
+	const name = SyscallsEnum[n];
 	if (name in _allSyscalls) {
 		return _allSyscalls[name];
 	}

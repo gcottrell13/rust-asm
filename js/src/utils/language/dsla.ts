@@ -119,6 +119,8 @@ export const DslaInstructionRegistration = {
 	gotol: 'Jump and link',
 	captureLink: 'Capture bus to a location',
 	ret: 'Return to a specified location',
+
+	alert: 'Print out a string',
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -200,6 +202,13 @@ const _instructions = (Load: get, Save: get, Label: label): dslaInstructions => 
 		return [
 			Load(_sourceVar),
 			op.JumpWithBusValueRelative(),
+		];
+	},
+
+	alert(_ptr) {
+		return [
+			Load(_ptr),
+			op.Alert(),
 		];
 	},
 
