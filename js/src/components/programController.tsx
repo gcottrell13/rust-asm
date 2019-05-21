@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TextViewer } from './displays/textViewer';
 import { Glyphicon, Button } from 'react-bootstrap';
-import { StepAsync, RequestBlockAsync, RunAsync } from '../utils/workerCommunication/messages';
+import { StepAsync, RequestBlockAsync, RunAsync, SetBreakpointAsync } from '../utils/workerCommunication/messages';
 
 export interface ProgramControllerProps {
 	workerId: string;
@@ -31,6 +31,9 @@ export function ProgramController({
 		return currentBlock;
 	};
 
+	const setBreakpointAsync = async (line: number) => {
+		await SetBreakpointAsync(workerId, line);
+	};
 	
 	const onPause = (_currentLine: number) => {
 		setStatus('paused');
@@ -81,7 +84,7 @@ export function ProgramController({
 			</div>
 			<TextViewer
 				blocksToDisplay={[0]}
-				canSetBreakpoints={false}
+				setBreakpointAsync={setBreakpointAsync}
 				getPausedLine={() => status === 'paused' ? currentLine : -1}
 				getBlockAsync={onRequestBlockAsync}
 			/>

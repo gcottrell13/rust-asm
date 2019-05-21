@@ -56,7 +56,6 @@ export function DslCompiler({}: DslCompilerProps) {
 				<Col xs={5} className={'full-height'}>
 					<TextViewer
 						blocksToDisplay={[compiledText.length]}
-						canSetBreakpoints={false}
 						getPausedLine={() => -1}
 						getBlockAsync={async () => compiledText.split('\n')}
 					/>

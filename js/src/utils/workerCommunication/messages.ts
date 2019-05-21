@@ -40,7 +40,7 @@ export async function RequestBlockAsync(id: string, blockNum: number): Promise<n
 	return null;
 }
 
-export async function SetBreakpoint(id: string, b: number) {
+export async function SetBreakpointAsync(id: string, b: number) {
 	const result = await AllWorkers.messageWorker(id, 'add-breakpoint', {
 		line: b,
 	})('updated-breakpoint');

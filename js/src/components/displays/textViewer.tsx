@@ -4,7 +4,7 @@ import { mapAsync } from '../../utils/generalUtils';
 
 export interface TextViewerProps {
 	blocksToDisplay: [number, ...number[]];
-	canSetBreakpoints: boolean;
+	setBreakpointAsync?: (line: number) => Promise<void>;
 	getPausedLine: () => number;
 	getBlockAsync: (blockNum: number) => Promise<(number | string)[] | null>;
 
@@ -14,7 +14,7 @@ export interface TextViewerProps {
 
 export function TextViewer({
 	blocksToDisplay,
-	canSetBreakpoints,
+	setBreakpointAsync,
 	getBlockAsync: getBlock,
 	getPausedLine,
 	hideNullRuns = false,
@@ -41,7 +41,7 @@ export function TextViewer({
 	);
 
 	const onClickLine = (lineNumber: number) => {
-		if (!canSetBreakpoints) return;
+		if (!setBreakpointAsync) return;
 
 		let newBreakpoints = new Set(breakpoints.values());
 		if (newBreakpoints.has(lineNumber)) {
@@ -51,6 +51,7 @@ export function TextViewer({
 			newBreakpoints.add(lineNumber);
 		}
 		setBreakpoint(newBreakpoints);
+		setBreakpointAsync(lineNumber).then();
 	};
 
 	const onScroll = (e: any) => {
