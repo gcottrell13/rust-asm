@@ -38,6 +38,10 @@ class Workers implements PublicWorkers {
 			}
 		};
 
+		worker.onerror = (ev: ErrorEvent) => {
+			console.log(ev);
+		};
+
 		this._workers[id] = worker;
 		return String(id);
 	}

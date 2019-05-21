@@ -209,8 +209,7 @@ export function syscall(code: number, param: number): SyscallResult {
 export function Initialize(text: string) {
 	let exports = GetWasmExports();
 	exports.r_Initialize();
-	MEM_SIZE = exports.r_GetMemoryBlockSize();
-
+	UpdateMemoryBlockSize();
 	GetBlock(0).set(dsl2machine(text).slice(0, MEM_SIZE), 1);
 }
 

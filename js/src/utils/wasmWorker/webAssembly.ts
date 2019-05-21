@@ -18,6 +18,7 @@ export interface WasmExports {
 
 const data = {
 	instance: Maybe<WebAssembly.Instance>(null),
+	module: Maybe<WebAssembly.Module>(null),
 };
 
 /**
@@ -25,12 +26,6 @@ const data = {
  */
 export function GetWasmExports(): WasmExports {
 	return data.instance.prop('exports').unwrap() as WasmExports;
-}
-
-function setWasmExport(instance: WebAssembly.Instance) {
-	data.instance = Maybe(instance);
-
-	// (window as any).WasmExports = instance.exports;
 }
 
 export const wasmReadStrFromMemory = (buffer: ArrayBuffer, ptr: number, length: number) => {
@@ -47,9 +42,16 @@ export const loadWasmAsync = async (filepath: string, wasmImports: any): Promise
 	if (data.instance.value() !== null) {
 		return;
 	}
-
+	
 	let response = await fetch(filepath);
 	let bytes = await response.arrayBuffer();
-	let results = await WebAssembly.instantiate(bytes, { env: wasmImports });
-	setWasmExport(results.instance);
+	try {
+		let results = await WebAssembly.instantiate(bytes, { env: wasmImports });
+		data.instance = Maybe(results.instance);
+		data.module = Maybe(results.module);
+	}
+	catch (e) {
+		console.error(e);
+	}
+	
 };
