@@ -193,8 +193,8 @@ export function setMemoryLocation(location: number, value: number) {
  * @param code the command to be run: see the list above
  * @param arg the argument to the command: also see above
  */
-export function syscall(code: number, arg: number): SyscallResult {
-	return GetSyscallWithNumber(code)(arg);
+export function syscall(code: number, param: number): SyscallResult {
+	return GetSyscallWithNumber(code)(param);
 }
 
 

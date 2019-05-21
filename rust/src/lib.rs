@@ -34,7 +34,7 @@ type location = u32;
 type jsint = c_int;
 
 extern "C" {
-	fn js_syscall(code: jsint, argument: jsint) -> jsint;
+	fn js_syscall(code: jsint, param: jsint) -> jsint;
 }
 
 #[no_mangle]
@@ -154,9 +154,9 @@ fn step(program: &mut Program) -> bool {
 	return false;
 }
 
-fn syscall(code: storage, arg: i32) -> i32 {
+fn syscall(code: storage, param: storage) -> i32 {
 	unsafe {
-		return js_syscall(code as jsint, arg);
+		return js_syscall(code as jsint, param as c_int);
 	}
 }
 
@@ -395,9 +395,9 @@ impl Processor {
 				self.add_region(newblock);
 			},
 			21 => {
-				let param = self.getParam();
+				let code = self.getParam();
 				// syscall
-				self.syscall(param);
+				self.syscall(code);
 			},
 			23 => {
 				stopCode = StopCode::Pause;
@@ -445,6 +445,7 @@ impl Processor {
 			_ => {
 				stopCode = StopCode::Halt;
 				self.status = ProcessorStatus::Halted;
+				self.dontMoveParamPointer();
 			},
 		};
 
@@ -589,9 +590,9 @@ impl Processor {
 	}
 
 	// opcode 15
-	fn syscall(&mut self, param: storage) {
-		let code = self.bus;
-		self.bus = i32_to_bits(syscall(code, bits_to_i32(param)));
+	fn syscall(&mut self, code: storage) {
+		let param = self.bus;
+		self.bus = i32_to_bits(syscall(code, param));
 	}
 
 	// opcode 1
