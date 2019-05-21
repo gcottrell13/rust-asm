@@ -1,0 +1,11 @@
+[package]
+name = "dsl-wasm"
+version = "0.1.0"
+authors = ["gage <gc362@nau.edu>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lazy_static = "*"
+console_error_panic_hook = "*"
