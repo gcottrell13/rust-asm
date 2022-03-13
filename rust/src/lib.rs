@@ -1,17 +1,32 @@
-#![allow(non_snake_case, unused_imports)]
-
 #[macro_use] 
 extern crate lazy_static;
 
-use std::env;
-use std::fs::File;
-use std::time::Duration;
-use std::thread;
+use wasm_bindgen::prelude::*;
+use std::ptr;
+use js_sys;
 use std::io::{BufRead, BufReader};
 use std::io::{self, Write};
 use std::sync::Mutex;
 use std::collections::{HashSet, HashMap};
 use std::os::raw::{c_double, c_float, c_int};
+
+// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+// allocator.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+
+fn set_panic_hook() {
+    // When the `console_error_panic_hook` feature is enabled, we can call the
+    // `set_panic_hook` function at least once during initialization, and then
+    // we will get better error messages if our code ever panics.
+    //
+    // For more details see
+    // https://github.com/rustwasm/console_error_panic_hook#readme
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
+}
 
 enum StopCode {
 	Pause,
@@ -19,6 +34,7 @@ enum StopCode {
 	None,
 }
 
+#[derive(PartialEq)]
 enum ProcessorStatus {
 	Paused,
 	Halted,
@@ -29,55 +45,98 @@ enum ProcessorStatus {
 
 const MEM_SIZE: usize = 1024 * 32;
 
+// lazy_static! {
+//     static ref MAIN_PROGRAM: Mutex<Program> = Mutex::new(Program::new());
+// }
+static mut MAIN_PROGRAM: Option<&mut Program> = None;
+
+fn getProgram() -> &mut Program {
+	unsafe {
+		match ptr::read(&MAIN_PROGRAM) {
+			Some(x) => x,
+			None => panic!(),
+		}
+	}
+}
+
+fn setProgram(T: &mut Program) {
+	unsafe {
+		ptr::replace(&mut MAIN_PROGRAM, Some(T));
+	}
+}
+
 type storage = u32;
 type location = u32;
 type jsint = c_int;
 
-extern "C" {
+#[wasm_bindgen]
+extern {
 	fn js_syscall(code: jsint, param: jsint) -> jsint;
 }
 
-#[no_mangle]
-pub extern "C" fn r_SetBreakpoint(n: jsint) {
-	SetBreakpoint(n as u32);
+#[wasm_bindgen]
+pub fn r_SetBreakpoint(n: jsint) {
+	let program = getProgram();
+	SetBreakpoint(n as u32, program);
 }
 
-#[no_mangle]
-pub extern "C" fn r_RemoveBreakpoint(n: jsint) {
-	RemoveBreakpoint(n as u32);
+#[wasm_bindgen]
+pub fn r_RemoveBreakpoint(n: jsint) {
+	let program = getProgram();
+	RemoveBreakpoint(n as u32, program);
 }
 
-#[no_mangle]
-pub extern "C" fn r_GetIsBreakpoint(n: jsint) -> bool {
-	return GetIsBreakpoint(n as u32);
+#[wasm_bindgen]
+pub fn r_GetIsBreakpoint(n: jsint) -> bool {
+	let program = getProgram();
+	return GetIsBreakpoint(n as u32, program);
 }
 
-#[no_mangle]
-pub extern "C" fn r_Continue() {
-	Continue();
+#[wasm_bindgen]
+pub fn r_GetBlock(n: usize) -> js_sys::Uint32Array {
+	let mem = getProgram().Processor.regions[n].memory;
+	unsafe { js_sys::Uint32Array::view(&mem) }
+} 
+
+#[wasm_bindgen]
+pub fn r_Continue() {
+	let program = getProgram();
+	Continue(program);
 }
 
-#[no_mangle]
-pub extern "C" fn r_StepOver() {
-	StepOver();
+#[wasm_bindgen]
+pub fn r_StepOver() {
+	let program = getProgram();
+	StepOver(program);
 }
 
-#[no_mangle]
-pub extern "C" fn r_Initialize() {
-	let program = &mut MAIN_PROGRAM.lock().unwrap(); 
-	program.Processor.add_region(MemoryBlock::new());
-	program.Processor.status = ProcessorStatus::NotStarted;
+#[wasm_bindgen]
+pub fn r_Initialize(init: &[storage]) {
+	// create the new program
+	let mut prg = Program::new();
+	setProgram(&mut prg);
+	
+
+	// initialize the processor
+	let mut processor = prg.Processor;
+	processor.add_region(MemoryBlock::new());
+	let x = processor.regions[0].memory;
+	x[..init.len()].copy_from_slice(&init);
+
+	// set the status
+	processor.status = ProcessorStatus::NotStarted;
+	
 }
 
-#[no_mangle]
-pub extern "C" fn r_GetInstructionPointer() -> jsint {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+#[wasm_bindgen]
+pub fn r_GetInstructionPointer() -> jsint {
+	let program = getProgram();
 	return program.Processor.next as jsint;
 }
 
-#[no_mangle]
-pub extern "C" fn r_GetProcessorStatus() -> jsint {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+#[wasm_bindgen]
+pub fn r_GetProcessorStatus() -> jsint {
+	let program = getProgram();
 	return match program.Processor.status {
 		ProcessorStatus::Paused => 0,
 		ProcessorStatus::Halted => 1,
@@ -87,53 +146,62 @@ pub extern "C" fn r_GetProcessorStatus() -> jsint {
 	}
 }
 
-#[no_mangle]
-pub extern "C" fn r_EnableBreakpoints() {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+#[wasm_bindgen]
+pub fn r_EnableBreakpoints() {
+	let program = getProgram();
 	program.DoBreakpoints = true;
 }
 
-#[no_mangle]
-pub extern "C" fn r_DisableBreakpoints() {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+#[wasm_bindgen]
+pub fn r_DisableBreakpoints() {
+	let program = getProgram();
 	program.DoBreakpoints = false;
 }
 
-#[no_mangle]
-pub extern "C" fn r_GetMemoryBlockSize() -> jsint {
+#[wasm_bindgen]
+pub fn r_GetMemoryBlockSize() -> jsint {
 	return MEM_SIZE as jsint;
 }
 
-#[no_mangle]
-pub extern "C" fn r_GetWasmMemoryLocation(location: jsint) -> jsint {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+#[wasm_bindgen]
+pub fn r_string() -> String {
+	"hello".into()
+}
+
+#[wasm_bindgen]
+pub fn r_GetWasmMemoryLocation(location: jsint) -> jsint {
+	let program = getProgram();
 	return program.Processor._get_pointer(location as u32);
 }
 
-lazy_static! {
-	static ref MAIN_PROGRAM: Mutex<Program> = Mutex::new(Program::new());
-}
-
-fn run() {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
-
+fn run(program: &mut Program) -> jsint {
 	match program.Processor.status {
-		ProcessorStatus::Halted => {},
-		ProcessorStatus::Empty => {},
+		ProcessorStatus::Halted => {
+			return 0;
+		},
+		ProcessorStatus::Empty => {
+			return 0;
+		},
 		_ => { // paused, not started, running
+			let mut steps_taken = 0;
 			program.Processor.status = ProcessorStatus::Running;
-			while !step(program) {
+			while program.Processor.status == ProcessorStatus::Running {
+				step(&mut program);
+				steps_taken += 1;
 			}
+
+			return steps_taken;
 		},
 	}
+
 }
 
-fn step(program: &mut Program) -> bool {
+fn step(program: &mut Program) {
 
 	if program.DoBreakpoints {
 		if program.Breakpoints.contains(&program.Processor.next) {
 			program.Processor.status = ProcessorStatus::Paused;
-			return true;
+			return;
 		}
 	} 
 
@@ -141,17 +209,15 @@ fn step(program: &mut Program) -> bool {
 
 	match stopCode {
 		StopCode::Halt => {
-			return true;
+			program.Processor.status = ProcessorStatus::Halted;
 		},
 		StopCode::Pause => {
-			return true;
+			program.Processor.status = ProcessorStatus::Paused;
 		},
 		StopCode::None => {
 			// continue
 		},
 	}
-
-	return false;
 }
 
 fn syscall(code: storage, param: storage) -> i32 {
@@ -160,37 +226,33 @@ fn syscall(code: storage, param: storage) -> i32 {
 	}
 }
 
-fn SetBreakpoint(point: u32) {
-	let mut prog = MAIN_PROGRAM.lock().unwrap();
-	if !prog.Breakpoints.contains(&point) {
-		prog.Breakpoints.insert(point);
+fn SetBreakpoint(point: u32, program: &mut Program) {
+	if !program.Breakpoints.contains(&point) {
+		program.Breakpoints.insert(point);
 	}
 }
 
-fn RemoveBreakpoint(point: u32) {
-	let mut prog = MAIN_PROGRAM.lock().unwrap();
-	if prog.Breakpoints.contains(&point) {
-		prog.Breakpoints.remove(&point);
+fn RemoveBreakpoint(point: u32, program: &mut Program) {
+	if program.Breakpoints.contains(&point) {
+		program.Breakpoints.remove(&point);
 	}
 }
 
-fn GetIsBreakpoint(point: u32) -> bool {
-	let mut prog = MAIN_PROGRAM.lock().unwrap();
-	return prog.Breakpoints.contains(&point);
+fn GetIsBreakpoint(point: u32, program: &mut Program) -> bool {
+	return program.Breakpoints.contains(&point);
 }
 
-fn Continue() {
-	run();
+fn Continue(program: &mut Program) {
+	run(program);
 }
 
-fn StepOver() {
-	let program = &mut MAIN_PROGRAM.lock().unwrap();
+fn StepOver(program: &mut Program) {
 	match program.Processor.status {
 		ProcessorStatus::Paused => {
-			step(program);
+			step(&mut program);
 		},
 		ProcessorStatus::NotStarted => {
-			step(program);
+			step(&mut program);
 			program.Processor.status = ProcessorStatus::Paused;
 		}
 		_ => {},
@@ -207,6 +269,7 @@ impl Program {
 		let Processor = Processor::new();
 		let Breakpoints = HashSet::new();
 		let DoBreakpoints = false;
+		set_panic_hook();
 		Program {
 			Processor,
 			Breakpoints,

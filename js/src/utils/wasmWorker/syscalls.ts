@@ -1,7 +1,6 @@
 import { Maybe, SMap, Either } from '../utilTypes';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { GetMemoryBuffer, GetWasmMemoryLocation } from './rustUtils';
-import { contains } from '../generalUtils';
 import { SyscallsEnum } from '../SyscallsEnum';
 
 
@@ -140,24 +139,18 @@ export function GetBuffersOfType(type: BufferType) {
 }
 
 function IsFromWasm(buffer: Buffer) {
-	return contains(
-		[
-			BufferType.OUTPUT_PALETTE,
-			BufferType.OUTPUT_SCREEN,
-			BufferType.OUTPUT_SCREEN_SIZE,
-		], 
-		buffer.type
-	);
+	return [
+		BufferType.OUTPUT_PALETTE,
+		BufferType.OUTPUT_SCREEN,
+		BufferType.OUTPUT_SCREEN_SIZE,
+	].includes(buffer.type);
 }
 
 function IsToWasm(buffer: Buffer) {
-	return contains(
-		[
-			BufferType.INPUT_KEY,
-			BufferType.INPUT_TERMINAL,
-		], 
-		buffer.type
-	);
+	return [
+		BufferType.INPUT_KEY,
+		BufferType.INPUT_TERMINAL,
+	].includes(buffer.type);
 }
 
 function IsBufferInitialized(buffer: Buffer) {

@@ -27,15 +27,6 @@ export function StringToASCII(text: string): Uint8Array {
 	return (new TextEncoder()).encode(text);
 }
 
-export function contains<T>(arr: ArrayLike<T>, value: T): boolean {
-	for (let i = 0; i < arr.length; i++) {
-		if (arr[i] === value) {
-			return true;
-		}
-	}
-	return false;
-}
-
 export function toInt(n: string): number {
 	const i = parseInt(n, 10);
 	if (isNaN(i)) {

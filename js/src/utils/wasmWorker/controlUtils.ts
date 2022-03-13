@@ -1,5 +1,5 @@
 import { ProcessorStatus } from './enums/ProcessorStatus';
-import { GetWasmExports } from './webAssembly';
+import wasm from 'rust-asm';
 import { AddListener, Trigger, RemoveListener } from '../debuggerEvents';
 import { Events } from './enums/Events';
 import { Continue, StepOver } from './rustUtils';
@@ -54,7 +54,7 @@ export function StepOverProgram() {
 
 function UpdateStatusCacheWithAuthoritative() {
 	status = (() => {
-		switch (GetWasmExports().r_GetProcessorStatus()) {
+		switch (wasm.r_GetProcessorStatus()) {
 			case 0:
 				return ProcessorStatus.Paused;
 			case 1:
